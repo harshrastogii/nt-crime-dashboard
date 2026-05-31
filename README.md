@@ -12,7 +12,7 @@ pinned: false
 
 An interactive analytics dashboard for Northern Territory recorded-crime data, built in Python with [Plotly Dash](https://dash.plotly.com/). It re-imagines a Power BI dashboard I built in 2025 as a reproducible, code-driven, web-deployable tool — and adds analysis aimed at the questions a policymaker actually asks.
 
-**Live demo:** _[add your Hugging Face Space URL here]_
+**Live demo:** _https://huggingface.co/spaces/harshrastogii/nt-crime-dashboard_
 
 ![dashboard preview](preview.png) <!-- add a screenshot named preview.png -->
 
