@@ -31,9 +31,26 @@ pio.templates["nt"]=go.layout.Template(layout=dict(
 ))
 T="nt"
 
-app=dash.Dash(__name__, title="NT Crime Intelligence",
+app=dash.Dash(__name__, title="Territory Crime Atlas",
     external_stylesheets=["https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"])
 server=app.server
+
+# Use the custom PNG favicon from the assets/ folder
+app.index_string = '''<!DOCTYPE html>
+<html>
+<head>
+{%metas%}
+<title>{%title%}</title>
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+{%favicon%}
+{%css%}
+</head>
+<body>
+{%app_entry%}
+<footer>{%config%}{%scripts%}{%renderer%}</footer>
+</body>
+</html>'''
+
 
 CARD={"backgroundColor":SURFACE,"borderRadius":"14px","padding":"4px 8px 10px",
       "border":f"1px solid {LINE}","boxShadow":"0 1px 3px rgba(16,24,40,0.05)"}
@@ -80,7 +97,7 @@ app.layout=html.Div(style={"backgroundColor":PAGE,"color":INK,"minHeight":"100vh
         "borderBottom":f"2px solid {ACCENT}","paddingBottom":"14px","marginBottom":"22px"}, children=[
         html.Div([html.Div(style={"display":"flex","alignItems":"center","gap":"12px"}, children=[
             html.Div(style={"width":"6px","height":"32px","backgroundColor":ACCENT,"borderRadius":"3px"}),
-            html.H1("NT Crime Intelligence", style={"fontWeight":700,"fontSize":"26px","margin":0})]),
+            html.H1("Territory Crime Atlas", style={"fontWeight":700,"fontSize":"26px","margin":0})]),
             html.P("Recorded offences, complete calendar years 2024-2025  |  Source: NT Police, NTG Open Data Portal",
                 style={"color":MUTE,"margin":"6px 0 0 18px","fontSize":"13px"})]),
         html.Div("Built with Python + Dash", style={"fontSize":"12px","color":MUTE})]),

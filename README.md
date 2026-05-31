@@ -1,5 +1,5 @@
 ---
-title: NT Crime Intelligence
+title: Territory Crime Atlas
 emoji: 🗺️
 colorFrom: blue
 colorTo: green
