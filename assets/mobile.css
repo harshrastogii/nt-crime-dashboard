@@ -1,0 +1,7 @@
+@media (max-width: 820px) {
+  .tca-grid-2, .tca-grid-4 { grid-template-columns: 1fr !important; }
+  .tca-page { padding-left: 14px !important; padding-right: 14px !important; }
+  .js-plotly-plot, .plot-container { width: 100% !important; }
+  .Select, .dash-dropdown { min-width: 100% !important; }
+  h1 { font-size: 20px !important; }
+}

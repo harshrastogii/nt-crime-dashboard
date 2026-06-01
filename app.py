@@ -91,7 +91,7 @@ app.index_string = """
 </html>
 """
 
-app.layout=html.Div(style={"backgroundColor":PAGE,"color":INK,"minHeight":"100vh",
+app.layout=html.Div(className="tca-page", style={"backgroundColor":PAGE,"color":INK,"minHeight":"100vh",
     "fontFamily":"Inter, system-ui, sans-serif","padding":"28px 34px","maxWidth":"1480px","margin":"0 auto"}, children=[
     html.Div(style={"display":"flex","justifyContent":"space-between","alignItems":"flex-end",
         "borderBottom":f"2px solid {ACCENT}","paddingBottom":"14px","marginBottom":"22px"}, children=[
@@ -115,15 +115,15 @@ app.layout=html.Div(style={"backgroundColor":PAGE,"color":INK,"minHeight":"100vh
             labelStyle={"marginRight":"16px","color":INK,"fontSize":"14px","cursor":"pointer"},
             inputStyle={"marginRight":"6px","accentColor":ACCENT})])]),
 
-    html.Div(id="kpis", style={"display":"grid","gridTemplateColumns":"repeat(4,1fr)","gap":"16px","marginBottom":"16px"}),
+    html.Div(id="kpis", className="tca-grid-4", style={"display":"grid","gridTemplateColumns":"repeat(4,1fr)","gap":"16px","marginBottom":"16px"}),
 
     html.Div(id="insight", style={"backgroundColor":"#eef5f6","border":f"1px solid #cfe3e6",
         "borderLeft":f"4px solid {ACCENT}","borderRadius":"12px","padding":"16px 20px",
         "marginBottom":"22px","fontSize":"14px","lineHeight":1.65,"color":INK}),
 
-    html.Div(style={"display":"grid","gridTemplateColumns":"1fr 1fr","gap":"20px","marginBottom":"20px"}, children=[g("g-rank"), g("g-map")]),
-    html.Div(style={"display":"grid","gridTemplateColumns":"1fr 1fr","gap":"20px","marginBottom":"20px"}, children=[g("g-yoy"), g("g-alcdv")]),
-    html.Div(style={"display":"grid","gridTemplateColumns":"1fr 1fr","gap":"20px","marginBottom":"20px"}, children=[g("g-season"), g("g-comp")]),
+    html.Div(className="tca-grid-2", style={"display":"grid","gridTemplateColumns":"1fr 1fr","gap":"20px","marginBottom":"20px"}, children=[g("g-rank"), g("g-map")]),
+    html.Div(className="tca-grid-2", style={"display":"grid","gridTemplateColumns":"1fr 1fr","gap":"20px","marginBottom":"20px"}, children=[g("g-yoy"), g("g-alcdv")]),
+    html.Div(className="tca-grid-2", style={"display":"grid","gridTemplateColumns":"1fr 1fr","gap":"20px","marginBottom":"20px"}, children=[g("g-season"), g("g-comp")]),
 
     html.Div(style={"padding":"14px 16px","backgroundColor":"#fbf7ec","border":"1px solid #ecdfbf",
         "borderRadius":"12px","fontSize":"12.5px","color":"#7a6a2f","lineHeight":1.6}, children=[
