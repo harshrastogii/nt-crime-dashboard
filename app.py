@@ -16,6 +16,7 @@ df = pd.read_parquet("crime_clean.parquet")
 CRIME_TYPES = sorted(df["Crime Type"].unique())
 LOC_TYPES = ["Urban", "Regional", "Remote"]
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+MONTH_OPTS = [{"label":m,"value":i+1} for i,m in enumerate(MONTHS)]
 
 INK="#1f2733"; MUTE="#6b7480"; LINE="#e6e9ee"; PAGE="#f4f6f8"; SURFACE="#ffffff"
 ACCENT="#0d6e7d"; GOOD="#1d8a5f"; BAD="#c0392b"; AMBER="#c39b3a"
@@ -110,6 +111,8 @@ app.layout=html.Div(className="tca-page", style={"backgroundColor":PAGE,"color":
             id="f-loc",placeholder="All locations",style={"minWidth":"170px"})]),
         html.Div([html.Label("Crime type", style=LBL), dcc.Dropdown(CRIME_TYPES,[],multi=True,
             id="f-crime",placeholder="All crime types",style={"minWidth":"210px"})]),
+        html.Div([html.Label("Month", style=LBL), dcc.Dropdown(MONTH_OPTS,[],multi=True,
+            id="f-month",placeholder="All months",style={"minWidth":"170px"})]),
         html.Div([html.Label("Region ranking shows", style=LBL), dcc.RadioItems(id="f-mode",value="rate",
             inline=True,options=[{"label":" Per 1,000 residents","value":"rate"},{"label":" Raw count","value":"raw"}],
             labelStyle={"marginRight":"16px","color":INK,"fontSize":"14px","cursor":"pointer"},
@@ -131,13 +134,15 @@ app.layout=html.Div(className="tca-page", style={"backgroundColor":PAGE,"color":
         "2023 (December only) and 2026 (Jan-Mar only) are partial periods, excluded from annual comparisons. "
         "Category trends cross the April 2025 ANZSOC reclassification. Per-1,000 rates use indicative 2021 census "
         "populations; small-population regions (e.g. Tennant Creek) have volatile rates. 'NT Balance' aggregates "
-        "remaining NT localities and is excluded from the map as it has no single location."])])
+        "remaining NT localities and is excluded from the map as it has no single location. "
+        "Selecting individual months produces small samples, especially for low-population areas, so rates and trends for single months should be read with caution."])])
 
-def fdf(years,locs,crimes):
+def fdf(years,locs,crimes,months=None):
     d=df
     if years: d=d[d["Year"].isin(years)]
     if locs: d=d[d["Location Type"].isin(locs)]
     if crimes: d=d[d["Crime Type"].isin(crimes)]
+    if months: d=d[d["Month number"].isin(months)]
     return d
 
 def kpi(label,value,sub=None,color=INK):
@@ -150,9 +155,9 @@ def kpi(label,value,sub=None,color=INK):
 @app.callback(
     Output("kpis","children"),Output("insight","children"),Output("g-rank","figure"),Output("g-map","figure"),
     Output("g-yoy","figure"),Output("g-alcdv","figure"),Output("g-season","figure"),Output("g-comp","figure"),
-    Input("f-year","value"),Input("f-loc","value"),Input("f-crime","value"),Input("f-mode","value"))
-def update(years,locs,crimes,mode):
-    d=fdf(years,locs,crimes)
+    Input("f-year","value"),Input("f-loc","value"),Input("f-crime","value"),Input("f-mode","value"),Input("f-month","value"))
+def update(years,locs,crimes,mode,months):
+    d=fdf(years,locs,crimes,months)
     total=d["Number of offences"].sum()
     alc=d[d["Alcohol involvement"]=="Yes"]["Number of offences"].sum()
     dv=d[d["DV involvement"]=="Yes"]["Number of offences"].sum()
