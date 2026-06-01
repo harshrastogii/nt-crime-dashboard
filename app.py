@@ -288,11 +288,13 @@ def update(years,locs,crimes,mode):
     fig_comp=go.Figure()
     for i,ct in enumerate(comp.columns):
         fig_comp.add_bar(x=pct.index,y=pct[ct],name=ct,marker_color=SEQ[i%len(SEQ)])
-    fig_comp.update_layout(template=T,barmode="stack",title="Crime mix by region \u00b7 share of each region's offences",
-        height=500,margin=dict(l=50,r=20,t=96,b=130),yaxis_title="% of region's offences",
+    fig_comp.update_layout(template=T,barmode="stack",
+        title="Crime mix by region \u00b7 share of each region's offences  (hover a segment for the category)",
+        height=460,margin=dict(l=50,r=20,t=54,b=130),yaxis_title="% of region's offences",
         yaxis=dict(ticksuffix="%"),
         xaxis=dict(tickangle=-90,automargin=True),
-        legend=dict(orientation="h",yanchor="bottom",y=1.04,xanchor="left",x=0,font=dict(size=10)))
+        showlegend=False)
+    fig_comp.update_traces(hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.0f}%%<extra></extra>")
 
     return kpis,insight,fig_rank,fig_map,fig_yoy,fig_alc,fig_sea,fig_comp
 
