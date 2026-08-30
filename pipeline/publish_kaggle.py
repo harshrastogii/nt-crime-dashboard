@@ -35,18 +35,32 @@ TITLE = "Northern Territory Crime Statistics — 2008–2026"
 
 
 def kaggle_username() -> str | None:
-    """The Kaggle account that will own the dataset. Read from the environment
-    or the credentials file - never hard-coded, because the Kaggle username
-    need not match the GitHub one."""
+    """The Kaggle account that will own the dataset. Never hard-coded: a Kaggle
+    username need not match the GitHub one. Resolved in the same order the CLI
+    itself authenticates - access token, then legacy key."""
     if os.environ.get("KAGGLE_USERNAME"):
         return os.environ["KAGGLE_USERNAME"]
     path = os.path.join(os.path.expanduser("~"), ".kaggle", "kaggle.json")
     if os.path.isfile(path):
         try:
             with open(path) as fh:
-                return json.load(fh).get("username")
+                user = json.load(fh).get("username")
+            if user:
+                return user
         except Exception:
-            return None
+            pass
+    # Access-token auth: the CLI resolves the username by introspecting the
+    # token, so ask it rather than trying to decode the token ourselves.
+    try:
+        res = subprocess.run([sys.executable, "-m", "kaggle", "config", "view"],
+                             capture_output=True, text=True, timeout=120)
+        for line in res.stdout.splitlines():
+            if line.strip().startswith("- username:"):
+                val = line.split(":", 1)[1].strip()
+                if val and val.lower() != "none":
+                    return val
+    except Exception:
+        pass
     return None
 
 
@@ -58,11 +72,13 @@ UPLOAD_FILES = ["nt_crime_master.csv", "DATA_DICTIONARY.md", "METHODOLOGY.md"]
 
 
 def have_credentials() -> tuple[bool, str]:
+    if os.environ.get("KAGGLE_API_TOKEN"):
+        return True, "environment (KAGGLE_API_TOKEN)"
     if os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"):
         return True, "environment (KAGGLE_USERNAME/KAGGLE_KEY)"
-    path = os.path.join(os.path.expanduser("~"), ".kaggle", "kaggle.json")
-    if os.path.isfile(path):
-        return True, "~/.kaggle/kaggle.json"
+    for name in ("access_token", "kaggle.json"):
+        if os.path.isfile(os.path.join(os.path.expanduser("~"), ".kaggle", name)):
+            return True, f"~/.kaggle/{name}"
     return False, "none found"
 
 
@@ -152,7 +168,7 @@ def stage(dest: str, ds_id: str) -> dict:
         "title": TITLE,
         "id": ds_id,
         "licenses": [{"name": "CC-BY-4.0"}],
-        "subtitle": "222 months of recorded crime in the NT, 2008-2026, with the source's traps handled",
+        "subtitle": "222 months of recorded crime in the Northern Territory, 2008-2026",
         "description": description(),
         "keywords": ["crime", "australia", "northern territory", "policing",
                      "public safety", "time series", "government"],
@@ -230,7 +246,11 @@ def main(argv=None):
                           "--dir-mode", "skip"], cwd=tmp)
     else:
         print(f"Dataset not found — creating it: {ds_id}")
-        res = kaggle_cli(["datasets", "create", "-p", tmp, "--dir-mode", "skip"], cwd=tmp)
+        # --public: the dataset is intended as a public release. Kaggle
+        # creates privately by default, and visibility cannot be changed
+        # from the CLI afterwards, so it must be set at creation time.
+        res = kaggle_cli(["datasets", "create", "-p", tmp, "--public",
+                          "--dir-mode", "skip"], cwd=tmp)
 
     print(res.stdout.strip())
     if res.returncode != 0:
