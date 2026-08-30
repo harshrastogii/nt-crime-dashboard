@@ -32,6 +32,12 @@ KAGGLE_DIR = os.path.join(BASE, "kaggle")
 
 DATASET_SLUG = "northern-territory-crime-statistics-2008-2026"
 TITLE = "Northern Territory Crime Statistics — 2008–2026"
+SUBTITLE = "222 months of recorded crime in the Northern Territory, 2008-2026"
+KEYWORDS = ["crime", "australia", "government", "public safety", "law"]
+# `datasets create` takes the short slug; the settings-update endpoint
+# validates against the display name. Same licence, two spellings.
+LICENSE_SLUG = "CC-BY-4.0"
+LICENSE_DISPLAY_NAME = "Attribution 4.0 International (CC BY 4.0)"
 
 
 def kaggle_username() -> str | None:
@@ -156,6 +162,122 @@ figures are not comparable with other Australian jurisdictions.
 """
 
 
+# File and column descriptions, taken verbatim in substance from
+# DATA_DICTIONARY.md so the Kaggle data card and the shipped documentation can
+# never drift apart.
+COLUMN_DESCRIPTIONS = [
+    ("Date", "yearmonth",
+     "Month the offence was reported to NT Police, as YYYY-MM. Runs 2008-01 to 2026-06 with no gaps."),
+    ("Year", "numeric", "Calendar year, 2008-2026. Always agrees with Date."),
+    ("Month number", "numeric", "Month of year, 1 = January through 12 = December."),
+    ("Crime Type", "string",
+     "Simplified nine-value label available in both eras: Homicide, Assault & Violence, Sexual Offences, "
+     "Harassment & Threats, Robbery & Extortion, Residential B&E, Commercial B&E, General Theft, Property Damage. "
+     "Lets you group both eras under one set of labels, but does NOT make them directly comparable."),
+    ("Offence category", "string",
+     "The government's own high-level classification, kept exactly as published. Wording differs between the two "
+     "eras (11 values under PROMIS, 9 under SerPro) with no shared value, so use it only within a single Data era."),
+    ("Offence type", "string",
+     "The government's detailed classification, kept exactly as published. 23 values in each era, none shared."),
+    ("Reporting Region", "string",
+     "One of seven NT reporting regions, plus Unknown. 'NT Balance' is the government's catch-all for everywhere "
+     "outside the main towns."),
+    ("Location", "string",
+     "The usable geography field: the town name where the region is a town, or the Statistical Area 2 (SA2) name "
+     "where the region is NT Balance. 27 distinct values, identical across both eras."),
+    ("Location Type", "string",
+     "Urban (Darwin, Palmerston), Regional (Alice Springs, Katherine, Tennant Creek), or Remote (all others)."),
+    ("Population (ABS 2021 reference)", "numeric",
+     "ABS 2021 Census usual-resident count. A single reference figure, NOT a population time series. Populated only "
+     "from December 2023 onward and only for 9 of the 27 locations; blank everywhere else. Blank means unknown, not "
+     "zero. Do not compute historical per-capita rates from it."),
+    ("Alcohol involvement", "string",
+     "Yes, No, or '-' (not applicable). Recorded for assault offences only. NOT comparable across the full period: "
+     "historical 'unknown' values were recoded to No during migration, and roughly 27% of assault offences "
+     "previously carried 'unknown'."),
+    ("DV involvement", "string",
+     "Domestic violence involvement for assault offences: Yes, No, or '-' (not applicable)."),
+    ("Data era", "string",
+     "Historical / PROMIS (2008-01 to 2023-11) or Current / SerPro (2023-12 to 2026-06). The NT Police recording "
+     "system changed between these two periods."),
+    ("Source extract", "string",
+     "Which official government extract supplied the row: the March 2024 historical extract (2008-01 to 2013-12), "
+     "the April 2024 historical extract (2014-01 to 2023-11), or the current extract (2023-12 onward)."),
+    ("is_break_month", "boolean",
+     "True on the two months where something documented changed: 2023-11 and 2025-04. The two events differ in kind "
+     "- see Break note."),
+    ("Break note", "string",
+     "Blank except on the two break months. 2023-11 is the SerPro cutover month, flagged provisional. 2025-04 is "
+     "when ANZSOC was adopted for NT reporting, applied retrospectively so categories do not change there."),
+    ("Number of offences", "numeric",
+     "Count of offences recorded by NT Police for this combination of month, offence, location and flags. Always 1 "
+     "or more; never zero, negative or missing. A row is a count, not a single crime."),
+]
+
+FILE_DESCRIPTIONS = {
+    "nt_crime_master.csv":
+        "The dataset. 56,217 rows covering 222 consecutive months, January 2008 to June 2026, with no missing "
+        "months. Each row is a count of offences recorded by NT Police for one combination of month, offence "
+        "category and type, location, and (for assault offences) alcohol and domestic-violence involvement. Read "
+        "Number of offences for the count - a row is not a single crime. Assembled from three official NT "
+        "Government extracts; every row records which one it came from.",
+    "DATA_DICTIONARY.md":
+        "Every column explained in plain language, plus the three things to read before analysing: why offence "
+        "categories cannot be compared across December 2023, why alcohol involvement is not comparable across the "
+        "full period, and why the population column is a 2021 reference value rather than a time series.",
+    "METHODOLOGY.md":
+        "How the dataset was built and why. Covers the cumulative-file trap in the source portal, which three "
+        "official extracts were used for which periods and why, the two documented breaks in the series "
+        "(November 2023 and April 2025), the location and population decisions, what was verified, and the known "
+        "limitations.",
+}
+
+
+# Provenance and cadence, stated exactly as METHODOLOGY.md documents them.
+PROVENANCE = (
+    "Northern Territory Government, Department of the Attorney-General and Justice - "
+    "NT Crime Statistics, published on the NTG Open Data Portal (data.nt.gov.au), group "
+    "'Crime, justice and law'. Offences are recorded by NT Police. Releases were "
+    "discovered through the portal's CKAN API and identified by inspecting each file's "
+    "Year and Month number columns rather than its filename, because the portal's "
+    "filenames are unreliable (the release titled 'November 2023' contained no November "
+    "2023 data). Every monthly release is cumulative, so files are never concatenated. "
+    "This dataset is assembled from exactly three official extracts, each covering a "
+    "distinct period: the March 2024 historical extract (2008-01 to 2013-12), the April "
+    "2024 historical extract (2014-01 to 2023-11), and the current SerPro-era extract "
+    "(2023-12 onward). The two historical extracts are pinned and are never replaced "
+    "automatically. Source data is published under a Creative Commons Attribution "
+    "(CC BY) licence; the portal does not specify a version. This derived dataset is "
+    "released under CC BY 4.0. Full detail, including the two documented breaks in the "
+    "series and the known limitations, is in METHODOLOGY.md."
+)
+
+# The NT Government publishes one release per month, roughly five weeks after the
+# crime month ends. An automated pipeline checks the portal daily but only
+# publishes when a genuinely new month appears, so the dataset's cadence is monthly.
+UPDATE_FREQUENCY = "monthly"
+
+COVER_IMAGE = "dataset-cover-image.png"
+
+
+def resources_block() -> list:
+    """Per-file and per-column descriptions for the Kaggle data card."""
+    return [
+        {
+            "path": "nt_crime_master.csv",
+            "description": FILE_DESCRIPTIONS["nt_crime_master.csv"],
+            "schema": {
+                "fields": [
+                    {"name": n, "description": d, "type": t}
+                    for n, t, d in COLUMN_DESCRIPTIONS
+                ]
+            },
+        },
+        {"path": "DATA_DICTIONARY.md", "description": FILE_DESCRIPTIONS["DATA_DICTIONARY.md"]},
+        {"path": "METHODOLOGY.md", "description": FILE_DESCRIPTIONS["METHODOLOGY.md"]},
+    ]
+
+
 def stage(dest: str, ds_id: str) -> dict:
     os.makedirs(dest, exist_ok=True)
     for name in UPLOAD_FILES:
@@ -167,11 +289,11 @@ def stage(dest: str, ds_id: str) -> dict:
     meta = {
         "title": TITLE,
         "id": ds_id,
-        "licenses": [{"name": "CC-BY-4.0"}],
-        "subtitle": "222 months of recorded crime in the Northern Territory, 2008-2026",
+        "licenses": [{"name": LICENSE_SLUG}],
+        "subtitle": SUBTITLE,
         "description": description(),
-        "keywords": ["crime", "australia", "northern territory", "policing",
-                     "public safety", "time series", "government"],
+        "keywords": KEYWORDS,
+        "resources": resources_block(),
     }
     with open(os.path.join(dest, "dataset-metadata.json"), "w") as fh:
         json.dump(meta, fh, indent=2)
@@ -206,12 +328,91 @@ def kaggle_cli(args, cwd=None):
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
 
 
+def data_block() -> list:
+    """The same descriptions in the shape the settings endpoint stores."""
+    return [
+        {
+            "name": "nt_crime_master.csv",
+            "description": FILE_DESCRIPTIONS["nt_crime_master.csv"],
+            "columns": [
+                {"name": n, "description": d, "type": t}
+                for n, t, d in COLUMN_DESCRIPTIONS
+            ],
+        },
+        {"name": "DATA_DICTIONARY.md",
+         "description": FILE_DESCRIPTIONS["DATA_DICTIONARY.md"], "columns": []},
+        {"name": "METHODOLOGY.md",
+         "description": FILE_DESCRIPTIONS["METHODOLOGY.md"], "columns": []},
+    ]
+
+
+def stage_metadata(dest: str, ds_id: str) -> dict:
+    """Write dataset-metadata.json (plus the cover image) for a settings-only
+    update. No data files: this path changes the data card, not the data."""
+    os.makedirs(dest, exist_ok=True)
+    meta = {
+        "id": ds_id,
+        "title": TITLE,
+        "subtitle": SUBTITLE,
+        "description": description(),
+        "licenses": [{"name": LICENSE_DISPLAY_NAME}],
+        "keywords": KEYWORDS,
+        "resources": resources_block(),
+        # The settings endpoint stores file/column descriptions under "data".
+        # The CLI can derive it from "resources", but sending it explicitly is
+        # what actually persists, so provide both.
+        "data": data_block(),
+        "userSpecifiedSources": PROVENANCE,
+        "expectedUpdateFrequency": UPDATE_FREQUENCY,
+        "isPrivate": False,
+    }
+    cover = os.path.join(KAGGLE_DIR, COVER_IMAGE)
+    if os.path.isfile(cover):
+        shutil.copyfile(cover, os.path.join(dest, COVER_IMAGE))
+        meta["image"] = COVER_IMAGE
+    with open(os.path.join(dest, "dataset-metadata.json"), "w") as fh:
+        json.dump(meta, fh, indent=2)
+    return meta
+
+
+def update_metadata() -> int:
+    """Push data-card metadata only - descriptions, provenance, cadence, cover."""
+    ds_id = dataset_id()
+    if not ds_id:
+        print("STOP: cannot determine the Kaggle username (no credentials).")
+        return 1
+    tmp = tempfile.mkdtemp(prefix="kaggle_meta_")
+    meta = stage_metadata(tmp, ds_id)
+    print(f"Updating metadata for {ds_id}")
+    print(f"  columns described : {len(meta['resources'][0]['schema']['fields'])}")
+    print(f"  files described   : {len(meta['resources'])}")
+    print(f"  provenance        : {len(meta['userSpecifiedSources'])} chars")
+    print(f"  update frequency  : {meta['expectedUpdateFrequency']}")
+    print(f"  cover image       : {meta.get('image') or 'none'}")
+    res = kaggle_cli(["datasets", "metadata", "--update", "-p", tmp, ds_id], cwd=tmp)
+    print(res.stdout.strip() or "(no output)")
+    if res.returncode != 0:
+        print(res.stderr.strip(), file=sys.stderr)
+        return 1
+    print(f"https://www.kaggle.com/datasets/{ds_id}")
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--update-metadata", action="store_true",
+                    help="update the data card only; do not re-upload data")
     ap.add_argument("--message", default="Automated update")
     args = ap.parse_args(argv)
+
+    if args.update_metadata:
+        ok, where = have_credentials()
+        print(f"Kaggle credentials: {'found in ' + where if ok else 'NOT FOUND'}")
+        if not ok:
+            return 1
+        return update_metadata()
 
     ok, where = have_credentials()
     print(f"Kaggle credentials: {'found in ' + where if ok else 'NOT FOUND'}")
@@ -242,8 +443,10 @@ def main(argv=None):
 
     if exists:
         print(f"Dataset exists — pushing a new version: {ds_id}")
+        # --keep-tabular: without it the CLI re-derives the schema during
+        # conversion, which discards the column descriptions we supply.
         res = kaggle_cli(["datasets", "version", "-p", tmp, "-m", args.message,
-                          "--dir-mode", "skip"], cwd=tmp)
+                          "--keep-tabular", "--dir-mode", "skip"], cwd=tmp)
     else:
         print(f"Dataset not found — creating it: {ds_id}")
         # --public: the dataset is intended as a public release. Kaggle
