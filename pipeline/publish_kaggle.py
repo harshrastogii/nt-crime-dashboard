@@ -30,8 +30,29 @@ import pandas as pd
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KAGGLE_DIR = os.path.join(BASE, "kaggle")
 
-DATASET_ID = "harshrastogii/northern-territory-crime-statistics-2008-2026"
+DATASET_SLUG = "northern-territory-crime-statistics-2008-2026"
 TITLE = "Northern Territory Crime Statistics — 2008–2026"
+
+
+def kaggle_username() -> str | None:
+    """The Kaggle account that will own the dataset. Read from the environment
+    or the credentials file - never hard-coded, because the Kaggle username
+    need not match the GitHub one."""
+    if os.environ.get("KAGGLE_USERNAME"):
+        return os.environ["KAGGLE_USERNAME"]
+    path = os.path.join(os.path.expanduser("~"), ".kaggle", "kaggle.json")
+    if os.path.isfile(path):
+        try:
+            with open(path) as fh:
+                return json.load(fh).get("username")
+        except Exception:
+            return None
+    return None
+
+
+def dataset_id() -> str | None:
+    user = kaggle_username()
+    return f"{user}/{DATASET_SLUG}" if user else None
 
 UPLOAD_FILES = ["nt_crime_master.csv", "DATA_DICTIONARY.md", "METHODOLOGY.md"]
 
@@ -119,7 +140,7 @@ figures are not comparable with other Australian jurisdictions.
 """
 
 
-def stage(dest: str) -> dict:
+def stage(dest: str, ds_id: str) -> dict:
     os.makedirs(dest, exist_ok=True)
     for name in UPLOAD_FILES:
         src = os.path.join(KAGGLE_DIR, name)
@@ -129,7 +150,7 @@ def stage(dest: str) -> dict:
 
     meta = {
         "title": TITLE,
-        "id": DATASET_ID,
+        "id": ds_id,
         "licenses": [{"name": "CC-BY-4.0"}],
         "subtitle": "222 months of recorded crime in the NT, 2008-2026, with the source's traps handled",
         "description": description(),
@@ -181,8 +202,13 @@ def main(argv=None):
     if args.check:
         return 0 if ok else 1
 
+    ds_id = dataset_id()
+    if not ds_id:
+        print("STOP: cannot determine the Kaggle username (no credentials).")
+        return 1
+    print(f"Target dataset: {ds_id}")
     tmp = tempfile.mkdtemp(prefix="kaggle_stage_")
-    stage(tmp)
+    stage(tmp, ds_id)
     facts = verify(tmp)
     print(f"Staged for upload from {tmp}")
     for k, v in facts.items():
@@ -195,22 +221,22 @@ def main(argv=None):
         print("STOP: no Kaggle credentials available; not attempting upload.")
         return 1
 
-    probe = kaggle_cli(["datasets", "status", DATASET_ID])
+    probe = kaggle_cli(["datasets", "status", ds_id])
     exists = probe.returncode == 0 and "404" not in (probe.stdout + probe.stderr)
 
     if exists:
-        print(f"Dataset exists — pushing a new version: {DATASET_ID}")
+        print(f"Dataset exists — pushing a new version: {ds_id}")
         res = kaggle_cli(["datasets", "version", "-p", tmp, "-m", args.message,
                           "--dir-mode", "skip"], cwd=tmp)
     else:
-        print(f"Dataset not found — creating it: {DATASET_ID}")
+        print(f"Dataset not found — creating it: {ds_id}")
         res = kaggle_cli(["datasets", "create", "-p", tmp, "--dir-mode", "skip"], cwd=tmp)
 
     print(res.stdout.strip())
     if res.returncode != 0:
         print(res.stderr.strip(), file=sys.stderr)
         return 1
-    print(f"https://www.kaggle.com/datasets/{DATASET_ID}")
+    print(f"https://www.kaggle.com/datasets/{ds_id}")
     return 0
 
 

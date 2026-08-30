@@ -104,6 +104,19 @@ python -m pipeline.update --dry-run   # build and validate, write nothing
 python tests/test_safety.py           # prove the safety checks still fire
 ```
 
+### One-time setup
+
+Two things need your own credentials and cannot be automated: the GitHub
+`workflow` scope, and a Kaggle API token. This script does both, then publishes
+the dataset and stores the secrets the workflow needs:
+
+```bash
+./scripts/finish_setup.sh
+```
+
+Your Kaggle key is piped straight from `~/.kaggle/kaggle.json` into
+`gh secret set` — it is never printed, logged, or written into the repository.
+
 ## Why this exists
 
 The original version was a Power BI report. It looked fine, but it had two limits: it couldn't be version-controlled or run on a Mac, and — more importantly — it answered the data's questions, not a decision-maker's. This rebuild fixes both. It runs anywhere from a single Python codebase, and it leads with the finding a director needs in the first five seconds.
