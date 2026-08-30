@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "note": "Historical entries are pinned and never replaced automatically. See METHODOLOGY.md for why these two extracts were chosen.",
+  "historical": [
+    {
+      "role": "historical_early",
+      "file": "data/historical_raw/nt_crime_statistics_nov_2023_updated_03_24.csv",
+      "covers": [
+        "2008-01",
+        "2013-12"
+      ],
+      "dataset_title": "NT Crime Statistics January 2024",
+      "resource_url": "https://data.nt.gov.au/dataset/ca417769-513c-49ed-9b8c-b08d13aac533/resource/2b264226-fac9-4bb2-9519-4cf28270ce1a/download/nt_crime_statistics_nov_2023_updated_03_24.csv",
+      "md5": "cd139d39bbab220c381913895019e73c",
+      "pinned": true
+    },
+    {
+      "role": "historical_late",
+      "file": "data/historical_raw/nt_crime_statistics_nov_2023_updated_04_24.csv",
+      "covers": [
+        "2014-01",
+        "2023-11"
+      ],
+      "dataset_title": "NT Crime Statistics February 2024",
+      "resource_url": "https://data.nt.gov.au/dataset/16c38102-69c5-413e-b92e-378593a9649d/resource/ad7c48ea-31f2-448f-b526-f735295be5b3/download/nt_crime_statistics_nov_2023_updated_04_24.csv",
+      "md5": "b9db6b2a2b93a34d792afed56f7070b0",
+      "pinned": true
+    }
+  ],
+  "current": {
+    "role": "current",
+    "file": "data/nt_crime_statistics_june_2026.csv",
+    "covers_from": "2023-12",
+    "covers_to": null,
+    "dataset_title": "Current - NT Crime Statistics June 2026",
+    "resource_url": null,
+    "as_at": null,
+    "md5": "7fed081d02d5e21e9746a607fa05092f",
+    "pinned": false
+  },
+  "expected_licence": {
+    "license_id": "cc-by",
+    "license_title": "Creative Commons Attribution"
+  },
+  "last_run": null,
+  "known_historical_urls": [
+    "https://data.nt.gov.au/dataset/0009541d-325f-4061-80ef-c14fbd4a163d/resource/9e1ddd29-d34e-4cc6-a7b2-1c6c7c83dd54/download/nt_crime_statistics_jul_2021.csv",
+    "https://data.nt.gov.au/dataset/071450ed-19ca-43d0-aff5-f8d3076f8d89/resource/d3133a41-357b-4b40-8418-d1a7e27df04d/download/nt_crime_statistics_jan_2020.csv",
+    "https://data.nt.gov.au/dataset/083e760c-f51b-44be-9d0c-633035e25610/resource/af9046be-fe59-490b-92f2-ec712a79455f/download/nt_crime_statistics_mar_2020.csv",
+    "https://data.nt.gov.au/dataset/0b0c24b1-43e3-4308-9c97-b68bb725a716/resource/eba7ff14-b4ee-4dcc-ae90-c5613a261a31/download/nt_crime_statistics_sep_2021.csv",
+    "https://data.nt.gov.au/dataset/0c00aa19-a826-471e-ac22-f800538d8987/resource/f5843824-1586-4d0c-93e7-cbed65da65b3/download/nt_crime_statistics_oct_2020.csv",
+    "https://data.nt.gov.au/dataset/170febb4-c729-4012-92a7-ab6a0ca22072/resource/5d3fa3fe-f1ca-46e8-b984-038f82a48a6a/download/nt_crime_statistics_oct_2022.csv",
+    "https://data.nt.gov.au/dataset/1c05f996-6c43-4847-84ce-44b7beb78816/resource/3652d84b-827d-4e4a-9e03-8126639e1edb/download/nt_crime_statistics_dec_2020.csv",
+    "https://data.nt.gov.au/dataset/2045f067-4462-4ac7-91a4-7d96495acd44/resource/d5254403-a34d-4149-8206-cd6b64595a0d/download/nt_crime_statistics_mar_2021.csv",
+    "https://data.nt.gov.au/dataset/2d563665-e630-4a6e-b941-84278e3ab799/resource/0e225e71-ae71-49c9-90e8-a129bea626f4/download/nt_crime_statistics_sep_2023.csv",
+    "https://data.nt.gov.au/dataset/3069ca93-7aca-4802-9894-61a37c2e2e1a/resource/d166187a-4d84-4e3a-a218-7193b3f431ec/download/nt_crime_statistics_jun_2021.csv",
+    "https://data.nt.gov.au/dataset/4461b8e9-9831-44c8-98c5-68eb0dbfbe0e/resource/b4660b8f-0933-4f46-843f-6986b8a315ad/download/nt_crime_statistics_jul_2020.csv",
+    "https://data.nt.gov.au/dataset/49c1f50f-41d1-462c-a96e-006f76131aaf/resource/4421b317-bf45-40f0-acaa-f338a432be42/download/nt_crime_statistics_nov_2023.csv",
+    "https://data.nt.gov.au/dataset/50dd8492-e0d4-4877-b2bd-c8f8a76e2c82/resource/c9b88589-9f9e-4a4c-80f1-03f0b7c9a057/download/nt_crime_statistics_jan_2022.csv",
+    "https://data.nt.gov.au/dataset/540b359e-96d7-4527-8293-8d1bcfbf3472/resource/d708f971-7584-4429-affa-64398e809596/download/nt_crime_statistics_dec_2021.csv",
+    "https://data.nt.gov.au/dataset/5821c60b-6a89-493f-816a-25837dbe2d66/resource/0e84b04f-0cbd-4ee7-a10a-fc72205ef6d1/download/nt_crime_statistics_mar_2022.csv",
+    "https://data.nt.gov.au/dataset/603cc696-b4fb-4686-b1ea-00c722c36893/resource/7640a580-e1b3-4be5-b6d2-e7e525720ead/download/nt_crime_statistics_jul_2023.csv",
+    "https://data.nt.gov.au/dataset/69806ca5-a51a-4368-98e3-a2c08fddcb98/resource/20ee99b6-4fa3-4f58-bfa1-d92fd3710fed/download/nt_crime_statistics_aug_2020.csv",
+    "https://data.nt.gov.au/dataset/6a61c36a-cfdb-49a0-b363-1a3f59b387c0/resource/326681e2-5b41-42e9-8089-2974caaee806/download/nt_crime_statistics_mar_2023.csv",
+    "https://data.nt.gov.au/dataset/6e06d066-522b-4d12-a99c-6424ba72a3aa/resource/26547ec5-e5a9-4cf4-930a-ef771b9513d0/download/nt_crime_statistics_jan_2021.csv",
+    "https://data.nt.gov.au/dataset/73b28312-8582-46e9-96ac-e53f825d94be/resource/ae920f70-92d9-4e9c-80c1-28612859bfb4/download/nt_crime_statistics_jan_2023.csv",
+    "https://data.nt.gov.au/dataset/7f6b1f89-deb1-4312-b061-698cc9cca841/resource/dcbd6e46-0359-4515-a928-e8df28fa4d72/download/nt_crime_statistics_sep_2020.csv",
+    "https://data.nt.gov.au/dataset/7fbce11d-10ef-4849-9c77-a25457c06fb7/resource/220f6c0b-638a-4cd1-86b8-49def0c2793a/download/nt_crime_statistics_may_2021.csv",
+    "https://data.nt.gov.au/dataset/7fccb2b5-e698-4dbf-8698-a2e23bd21eee/resource/6990a5a7-8b7c-4114-9537-ef253121e85c/download/nt_crime_statistics_feb_2020.csv",
+    "https://data.nt.gov.au/dataset/890bb745-053c-44eb-9f85-07550f766fd6/resource/aeb369b0-b3e7-48a4-afb9-630e0489a96e/download/nt_crime_statistics_aug_2021.csv",
+    "https://data.nt.gov.au/dataset/89ff2363-7422-4155-a995-bef6b231efee/resource/19e9d868-41e0-4fcb-a159-66194dc11287/download/nt_crime_statistics_nov_2020.csv",
+    "https://data.nt.gov.au/dataset/9156eaf1-94dc-490b-980b-a56db8d0197d/resource/e7fff353-b59c-46f4-b09d-f1a41964849e/download/nt_crime_statistics_nov_2021.csv",
+    "https://data.nt.gov.au/dataset/949486cf-9b25-431e-aaf9-60487c5d1ce3/resource/d7462a55-1277-4b78-b009-8ffd024910fa/download/nt_crime_statistics_jun_2020.csv",
+    "https://data.nt.gov.au/dataset/98909ea5-223e-44c3-99a0-ccc36464ca89/resource/abac7a54-34f8-4431-84d5-77d3ec15d829/download/nt_crime_statistics_sep_2022.csv",
+    "https://data.nt.gov.au/dataset/9a21e6e3-b3b4-4f88-bb80-6553c366f2e3/resource/77778c95-447d-4e75-bb9a-65317ec2d348/download/nt_crime_statistics_feb_2022.csv",
+    "https://data.nt.gov.au/dataset/9d9b06d0-916a-4731-ac15-4ff47e466ed0/resource/0559d640-bc36-47f3-accb-9ce0917ac22c/download/nt_crime_statistics_dec_2022.csv",
+    "https://data.nt.gov.au/dataset/a40ec1e6-062b-4bb1-898b-40b209e08936/resource/83b712cd-ad1b-4a70-b93e-e566b96c5b85/download/nt_crime_statistics_oct_2021.csv",
+    "https://data.nt.gov.au/dataset/aad0a873-6f1a-4116-add5-a9a6ad0b7d65/resource/add33d77-37ea-479c-87c2-34f3dc51871f/download/nt_crime_statistics_may_2020.csv",
+    "https://data.nt.gov.au/dataset/ad99f90a-a55b-445c-93d8-ff8d153125d6/resource/c097eae2-e348-4fd4-8ad2-ae4fbddb2d57/download/nt_crime_statistics_aug_2022.csv",
+    "https://data.nt.gov.au/dataset/afff69dd-5068-44f4-9e59-b5cc8b6b5724/resource/a817d61c-d327-4812-b19f-034c3d660899/download/nt_crime_statistics_jul_2022.csv",
+    "https://data.nt.gov.au/dataset/b175b8e9-2b69-4fc6-8b7e-05c2efd3588b/resource/e65da881-b57e-418d-b21d-3f702c73431a/download/nt_crime_statistics_nov_2022.csv",
+    "https://data.nt.gov.au/dataset/b196709a-2a51-4928-bdf2-62f22f2a4481/resource/beb401dc-d1d9-4b58-8291-2fa9f07e0ae0/download/nt_crime_statistics_apr_2022.csv",
+    "https://data.nt.gov.au/dataset/b1ef706b-4b64-478a-943a-b01466e2d1a2/resource/72c3bee6-8f0a-4489-89c0-8bb9a57eeeac/download/nt_crime_statistics_oct_2023.csv",
+    "https://data.nt.gov.au/dataset/b7629ce9-5bdb-4345-99fe-2ae385b75cea/resource/2ebde2f7-486c-4254-b7bf-c18510c4d503/download/nt_crime_statistics_may_2022.csv",
+    "https://data.nt.gov.au/dataset/cf451ce5-44d9-4566-8e09-e9d9552e8156/resource/c95c8035-dcda-4933-b092-4a53f4cd17d2/download/nt_crime_statistics_apr_2020.csv",
+    "https://data.nt.gov.au/dataset/d325665f-02d3-48ad-984a-384101d8bea3/resource/67fc81de-adf5-4e8c-8eff-a0648e52811f/download/nt_crime_statistics_feb_2023.csv",
+    "https://data.nt.gov.au/dataset/d67bc8e5-8fff-4014-af3a-f3d44d53b67e/resource/53e19320-b3eb-41a8-b589-de1580d23ea4/download/nt_crime_statistics_may_2023.csv",
+    "https://data.nt.gov.au/dataset/d690e294-003f-4928-9686-a4ff1984bf79/resource/df3fc0d7-d8d8-4b6b-9526-559d23f1c2f0/download/nt_crime_statistics_apr_2023.csv",
+    "https://data.nt.gov.au/dataset/d901f335-92fe-4088-bf45-7a1b742aed9b/resource/1f0d6390-3c5b-4cb9-9a5a-3c49417d8c29/download/nt_crime_statistics_aug_2023.csv",
+    "https://data.nt.gov.au/dataset/ec69ba11-99fa-4f5c-a445-ac6afa0e3478/resource/c49ff70b-e263-42c8-b035-7c5eac34fb96/download/nt_crime_statistics_apr_2021.csv",
+    "https://data.nt.gov.au/dataset/eeb1efe2-2229-47a8-b3d7-c563dab28b33/resource/05f5def1-fc3c-444a-a63e-38b2fe432c66/download/nt_crime_statistics_feb_2021.csv",
+    "https://data.nt.gov.au/dataset/efbd5e47-242c-4925-b3a6-5430ce48836d/resource/71ae698a-61cf-4e96-8f46-0306eca30aa7/download/nt_crime_statistics_jun_2023.csv",
+    "https://data.nt.gov.au/dataset/fee6930c-db5f-4f47-bf39-dba3dc47f3dc/resource/495bb876-22d8-4895-8042-d6dbc31986ab/download/nt_crime_statistics_jun_2022.csv"
+  ],
+  "known_historical_note": "Historical-era releases already evaluated during the initial build (see MONTH_AVAILABILITY_REPORT and METHODOLOGY). Only releases NOT in this list, and confirmed by content to be PROMIS-era, raise a review flag."
+}

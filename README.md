@@ -18,6 +18,92 @@ An interactive analytics dashboard for Northern Territory recorded-crime data, b
 
 ---
 
+
+---
+
+## The dataset (Kaggle)
+
+Alongside the dashboard, this repo builds and publishes a clean public dataset:
+**Northern Territory Crime Statistics — 2008–2026**.
+
+- **What it is:** every month of recorded crime in the Northern Territory from
+  **January 2008 to June 2026** — 222 consecutive months, no gaps. 56,217 rows,
+  567,438 recorded offences, 27 locations.
+- **Where the data comes from:** the Northern Territory Government's official
+  open data portal, <https://data.nt.gov.au/group/law>. Offences are recorded by
+  NT Police and published by the Department of the Attorney-General and Justice.
+- **Licence:** the source is published under a Creative Commons Attribution
+  (CC BY) licence — the portal does not state a version. The dataset built here
+  is released under **CC BY 4.0**.
+
+Files published: `kaggle/nt_crime_master.csv`, `kaggle/DATA_DICTIONARY.md`,
+`kaggle/METHODOLOGY.md`.
+
+### How the history was put together
+
+The portal is harder to use than it looks. Every monthly file is **cumulative** —
+it contains the whole history, not just that month — so stacking the downloads
+counts old months many times over. Filenames are also unreliable: they don't sort
+chronologically, and the file named "November 2023" contained no November 2023
+data.
+
+The dataset is therefore assembled from exactly three official extracts, chosen
+by reading their contents rather than their names:
+
+| Period | Source |
+|---|---|
+| 2008-01 → 2013-12 | March 2024 historical extract |
+| 2014-01 → 2023-11 | April 2024 historical extract |
+| 2023-12 → present | the newest current-era release |
+
+The two historical extracts are **pinned** and are never replaced automatically.
+
+### Three things that matter when using it
+
+**The recording system changed between November and December 2023.** NT Police
+moved from PROMIS to SerPro. The NT Government advises that data from December
+2023 onward should not be compared directly with earlier data. Every row carries
+a `Data era` tag so the two periods can be analysed separately.
+
+**November 2023 is marked specially.** It is the cutover month — the last month
+recorded under the old system, and the month the new one was rolled out. It was
+missing from the original November 2023 release and only appeared later as a
+supplementary correction. It is flagged provisional because the government
+advises data for this period may be incomplete or subject to later revision.
+
+**Population is limited on purpose.** The column holds ABS 2021 Census figures
+and is filled in only from December 2023 onward, for 9 of the 27 locations.
+Applying one 2021 number to 2008 would be wrong, so historical rows are blank.
+Blank means unknown, not zero — don't compute historical per-capita rates from it.
+
+### How automatic updates work
+
+A GitHub Action (`.github/workflows/update-data.yml`) runs daily and can also be
+triggered by hand:
+
+1. Queries the portal's CKAN API for every crime-statistics release.
+2. **Downloads and inspects candidates** — decisions come from the `Year` and
+   `Month number` columns inside each file, never from its filename.
+3. If the newest release contains a month we don't have, rebuilds the master
+   dataset — history from the pinned extracts, the current era from the new file.
+4. Runs the full validation suite.
+5. Only if every critical check passes: commits, pushes, and publishes a new
+   version of the Kaggle dataset.
+
+If anything looks wrong — a month disappears, totals move too far, an unknown
+offence category appears, the file can't be parsed — **the pipeline stops and
+publishes nothing**, and writes `kaggle/UPDATE_REPORT.md` explaining why. If the
+government publishes something that would change the pinned historical period,
+that is reported for review and never applied automatically.
+
+Run it yourself:
+
+```bash
+python -m pipeline.update --check     # is there anything new?
+python -m pipeline.update --dry-run   # build and validate, write nothing
+python tests/test_safety.py           # prove the safety checks still fire
+```
+
 ## Why this exists
 
 The original version was a Power BI report. It looked fine, but it had two limits: it couldn't be version-controlled or run on a Mac, and — more importantly — it answered the data's questions, not a decision-maker's. This rebuild fixes both. It runs anywhere from a single Python codebase, and it leads with the finding a director needs in the first five seconds.

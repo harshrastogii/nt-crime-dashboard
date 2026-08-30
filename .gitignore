@@ -1,3 +1,11 @@
 crime_clean.parquet
 .DS_Store
 __pycache__/
+
+# local backups of published datasets - never publish these
+kaggle/*.BACKUP_*.csv
+# credentials must never be committed
+.kaggle/
+kaggle.json
+*.pem
+.env
