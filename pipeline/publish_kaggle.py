@@ -31,8 +31,8 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KAGGLE_DIR = os.path.join(BASE, "kaggle")
 
 DATASET_SLUG = "northern-territory-crime-statistics-2008-2026"
-TITLE = "Northern Territory Crime Statistics — 2008–2026"
-SUBTITLE = "222 months of recorded crime in the Northern Territory, 2008-2026"
+TITLE = "Northern Territory Crime Statistics 2008-2026"
+SUBTITLE = "222 consecutive months with no gaps, rebuilt from official NT releases"
 KEYWORDS = ["crime", "australia", "government", "public safety", "law"]
 # `datasets create` takes the short slug; the settings-update endpoint
 # validates against the display name. Same licence, two spellings.
@@ -90,75 +90,86 @@ def have_credentials() -> tuple[bool, str]:
 
 def description() -> str:
     return """\
-Recorded crime in the Northern Territory of Australia, every month from
-January 2008 to June 2026 — 222 consecutive months with no gaps.
+Every month of recorded crime in the Northern Territory of Australia, from
+January 2008 to June 2026. That is 222 consecutive months with no gaps.
 
-Built from the Northern Territory Government's official open data releases and
-reassembled into a single clean time series, with the traps that make this
-source difficult already handled.
+The Territory publishes this data monthly, and it is harder to use than it
+looks. Each release is cumulative, so stacking the monthly downloads counts old
+months many times over. The filenames do not sort chronologically. And the
+release titled "November 2023" contains no November 2023 data; that month
+appeared later, as a correction attached to a different dataset page. This
+build resolves all three.
 
 ## What's inside
 
-- 56,217 rows, 567,438 recorded offences
-- 222 months, January 2008 → June 2026, no missing months
-- 27 locations, including remote communities that the government's default
+- 56,217 rows and 567,438 recorded offences
+- 222 months, January 2008 to June 2026, none missing
+- 27 locations, including the remote communities that the government's
   "NT Balance" grouping hides
-- Offence category and type as published, plus a simplified `Crime Type` that
-  spans both eras
-- Alcohol and domestic-violence involvement for assault offences
+- Offence category and type exactly as published, plus a simplified `Crime Type`
+  that exists in both eras
+- Alcohol and domestic-violence involvement, recorded for assault offences
 
-## Read this before analysing
+A row is a count, not a single crime. Read `Number of offences` for the number.
 
-**The recording system changed between November 2023 and December 2023.** The
+## Before you analyse this
+
+### The recording system changed between November and December 2023
+
 NT Police moved from PROMIS to SerPro. The NT Government advises that data from
-December 2023 onward should not be compared directly with earlier data. Every
-row is tagged `Data era` so you can separate the two. The simplified
-`Crime Type` field lets you group both eras under one set of labels, but it does
-not make them comparable.
+December 2023 onward should not be compared directly with anything earlier.
+Every row carries a `Data era` tag so you can hold the two periods apart.
+`Crime Type` gives both eras one shared set of labels, which makes them
+groupable but still not comparable.
 
-**November 2023 is a cutover month and is flagged provisional.** It exists in
-this dataset (278 rows, 3,345 offences) but was not published in the original
-November 2023 release — it appeared months later as a supplementary correction.
-The NT Government advises that data for this period may be incomplete or
-subject to later revision.
+### November 2023 is provisional
 
-**April 2025 is flagged, but nothing changes there.** That is when NT adopted
-the 2023 ANZSOC classification for reporting. It was applied retrospectively
-across the whole current era, so categories do not change at that month inside
-this dataset. The flag exists only to warn against comparing with NT
-publications produced before May 2025.
+It is present, with 278 rows and 3,345 offences. It was missing from the
+original November 2023 release and surfaced months later as a supplementary
+correction. The government advises that data for this period may be incomplete
+or subject to later revision.
 
-**Alcohol involvement is not comparable across the full period.** Historically
-"unknown" was a valid answer; during migration all unknown values were recoded
-to "No". The NT metadata notes roughly 27% of assault offences previously
-carried "unknown". A 2008–2026 alcohol trend line partly measures this coding
-change.
+### April 2025 is flagged, and nothing changes there
 
-**Population is a 2021 reference figure, not a time series.** It holds ABS 2021
-Census counts and is populated only from December 2023 onward, for 9 of the 27
-locations. It is blank everywhere else. Blank means unknown, not zero. Do not
-compute historical per-capita rates from it.
+That is when the Territory adopted the 2023 ANZSOC classification. It was
+applied retrospectively across the whole current era, so the categories either
+side of that month are identical. The flag exists to stop you comparing against
+NT publications produced before May 2025.
+
+### Alcohol involvement breaks across the two eras
+
+"Unknown" used to be a valid answer. During migration every unknown was recoded
+to "No", and the NT metadata notes that roughly 27% of assault offences had
+carried "unknown". Plot alcohol-related assault across the full period and part
+of what you are measuring is that recoding.
+
+### Population is a 2021 snapshot
+
+The column holds ABS 2021 Census counts, filled in only from December 2023
+onward and only for 9 of the 27 locations. Everywhere else it is blank, and
+blank means unknown rather than zero. Historical per-capita rates cannot be
+built from it.
 
 ## Files
 
-- `nt_crime_master.csv` — the dataset
-- `DATA_DICTIONARY.md` — every column explained
-- `METHODOLOGY.md` — how it was built, which official extracts were used, and
-  the known limitations
+- `nt_crime_master.csv` is the dataset
+- `DATA_DICTIONARY.md` explains every column in plain language
+- `METHODOLOGY.md` covers which official extracts were used for which period,
+  and the limitations
 
 ## Source and licence
 
 Source: Northern Territory Government, Department of the Attorney-General and
-Justice — NT Crime Statistics, published on the NTG Open Data Portal
-(data.nt.gov.au). Offences recorded by NT Police.
+Justice, NT Crime Statistics, published on the NTG Open Data Portal
+(data.nt.gov.au). Offences are recorded by NT Police.
 
-The source data is published by the Northern Territory Government under a
-Creative Commons Attribution (CC BY) licence; the portal does not specify a
-version. This derived dataset is released under CC BY 4.0.
+The source data is published under a Creative Commons Attribution (CC BY)
+licence; the portal does not state a version. This derived dataset is released
+under CC BY 4.0.
 
-These are recorded offences, not victims, offenders, or court outcomes, and
-they reflect crime reported to police rather than all crime that occurred. NT
-figures are not comparable with other Australian jurisdictions.
+These are offences recorded by police, not victims, offenders or court
+outcomes, and they reflect crime that was reported. NT figures are not
+comparable with other Australian jurisdictions.
 """
 
 
