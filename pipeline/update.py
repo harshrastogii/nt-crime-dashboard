@@ -22,12 +22,13 @@ import datetime as dt
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 
 import pandas as pd
 
-from . import build, inspect_csv, manifest, portal, validate
+from . import build, inspect_csv, manifest, portal, refresh_docs, stats, validate
 
 BASE = manifest.BASE
 MASTER = os.path.join(BASE, "kaggle", "nt_crime_master.csv")
@@ -167,6 +168,17 @@ def write_report(path, *, status, res, chosen, hist_flags, portal_notes,
         L.append("")
     else:
         L.append("**Existing months revised:** none\n")
+
+    gone = f.get("vanished_keys", [])
+    if gone:
+        L.append(f"**Records no longer present:** {len(gone)} "
+                 "(a later release usually moved them to a corrected location or flag)\n")
+        L.append("| Month | Offence type | Location | Alcohol | DV | Offences |")
+        L.append("|---|---|---|---|---|---|")
+        for g in gone[:25]:
+            L.append(f"| {g['date']} | {g['offence_type']} | {g['location']} | "
+                     f"{g['alcohol']} | {g['dv']} | {g['offences']} |")
+        L.append("")
 
     if "historical_total_change_pct" in f:
         L.append(f"**Pinned historical total change:** {f['historical_total_change_pct']:+.4f}% "
@@ -322,7 +334,7 @@ def main(argv=None):
         with open(cur_path, "wb") as fh:
             fh.write(chosen["blob"])
 
-        label = f"{rep.last_month} current extract (As At {rep.as_at})"
+        label = f"{stats.month_name(rep.last_month)} current extract"
         out_path = os.path.join(tmpdir, "nt_crime_master.csv")
         new = build.build(
             current_file=cur_path,
@@ -357,6 +369,14 @@ def main(argv=None):
                 log(open(report_path).read())
             return 1
 
+        # The published pages must move with the data. Confirm every figure in
+        # the docs can be refreshed before writing anything, so a wording change
+        # stops the run instead of shipping a half-updated page.
+        new_stats = stats.compute(new)
+        stats.check_documented(new_stats)
+        current_file = os.path.basename(chosen["cand"].url)
+        refresh_docs.refresh(new_stats, current_file, check_only=True)
+
         if args.dry_run or args.simulate:
             log(f"DRY RUN OK — nothing written to kaggle/. Report at {report_path}")
             log(f"  would add months: {res.facts.get('new_months')}")
@@ -366,6 +386,14 @@ def main(argv=None):
         dest_src = os.path.join(DATA_DIR, os.path.basename(chosen["cand"].url))
         shutil.copyfile(cur_path, dest_src)
         shutil.copyfile(out_path, MASTER)
+        for f in refresh_docs.refresh(new_stats, current_file):
+            log(f"  refreshed {f}")
+        cover = subprocess.run([sys.executable, os.path.join(BASE, "scripts", "make_cover.py")],
+                               capture_output=True, text=True)
+        if cover.returncode != 0:
+            log(f"STOP: cover image could not be regenerated:\n{cover.stdout}{cover.stderr}")
+            return 1
+        log("  regenerated kaggle/dataset-cover-image.png")
         man["current"].update({
             "file": os.path.relpath(dest_src, BASE),
             "covers_to": rep.last_month,

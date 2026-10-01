@@ -7,7 +7,7 @@ crops a fixed rectangle in SOURCE pixels, (0, 0, 560, 280) for the cover and
 everything outside the top-left 560x280. Authoring at exactly that size makes
 the crop a no-op.
 
-The artwork is the series itself: one bar per month, 222 of them, coloured by
+The artwork is the series itself: one bar per month, coloured by
 recording era, with the two documented breaks marked. Drawn from the published
 CSV, so it cannot drift out of step with the data.
 
@@ -54,7 +54,7 @@ def main():
     ax.set_facecolor(INK)
     ax.bar(range(len(vals)), vals, width=0.86, color=colours, linewidth=0)
 
-    # The two breaks fall close together on a 222-month axis, so the labels
+    # The two breaks fall close together on the monthly axis, so the labels
     # are staggered and pushed to opposite sides of their rules.
     placement = {"2023-11": (-2.5, 0.99, "right"), "2025-04": (2.5, 0.80, "left")}
     for when, label in BREAKS.items():
@@ -83,9 +83,13 @@ def main():
     # --- type ---------------------------------------------------------
     fig.text(0.057, 0.855, "NORTHERN TERRITORY, AUSTRALIA", color=SERPRO,
              fontsize=6.4, fontweight="bold")
-    fig.text(0.057, 0.715, "Recorded crime, 2008–2026", color=PAPER,
+    first_year, last_year = dates[0][:4], dates[-1][:4]
+    fig.text(0.057, 0.715, f"Recorded crime, {first_year}–{last_year}", color=PAPER,
              fontsize=17.5, fontweight="bold")
-    fig.text(0.057, 0.635, "222 consecutive months  ·  567,438 offences  ·  27 locations",
+    total = int(df["Number of offences"].sum())
+    fig.text(0.057, 0.635,
+             f"{len(dates)} consecutive months  ·  {total:,} offences  ·  "
+             f"{df['Location'].nunique()} locations",
              color=MUTED, fontsize=7.2)
 
     # Era key: a swatch and a label, so the bar colours are decodable.

@@ -179,8 +179,8 @@ No population value was estimated, interpolated, or back-cast.
 - No month drawn from more than one extract; no duplicate rows or dimension keys.
 - Each segment reconciles exactly against its source file — 0 records lost,
   0 invented, 0 counts altered.
-- The December 2023 → June 2026 portion was validated row-for-row against an
-  independently prepared extract of the same source file.
+- At the initial build, the December 2023 → June 2026 portion was validated
+  row-for-row against an independently prepared extract of the same source file.
 - Every original source file was left byte-for-byte unchanged (checksums
   verified before and after the build).
 

@@ -27,12 +27,28 @@ import tempfile
 
 import pandas as pd
 
+from . import stats
+
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KAGGLE_DIR = os.path.join(BASE, "kaggle")
 
 DATASET_SLUG = "northern-territory-crime-statistics-2008-2026"
-TITLE = "Northern Territory Crime Statistics 2008-2026"
-SUBTITLE = "222 consecutive months with no gaps, rebuilt from official NT releases"
+
+
+def title(s: dict) -> str:
+    return f"Northern Territory Crime Statistics {s['first_year']}-{s['last_year']}"
+
+
+def subtitle(s: dict) -> str:
+    return f"{s['months']} consecutive months with no gaps, rebuilt from official NT releases"
+
+
+def figures() -> dict:
+    """Headline figures from the master CSV that is about to be published."""
+    s = stats.load(os.path.join(KAGGLE_DIR, "nt_crime_master.csv"))
+    stats.check_documented(s)
+    return s
+
 KEYWORDS = ["crime", "australia", "government", "public safety", "law"]
 # `datasets create` takes the short slug; the settings-update endpoint
 # validates against the display name. Same licence, two spellings.
@@ -88,10 +104,10 @@ def have_credentials() -> tuple[bool, str]:
     return False, "none found"
 
 
-def description() -> str:
+def description(s: dict) -> str:
     return """\
 Every month of recorded crime in the Northern Territory of Australia, from
-January 2008 to June 2026. That is 222 consecutive months with no gaps.
+{first_name} to {last_name}. That is {months} consecutive months with no gaps.
 
 The Territory publishes this data monthly, and it is harder to use than it
 looks. Each release is cumulative, so stacking the monthly downloads counts old
@@ -102,8 +118,8 @@ build resolves all three.
 
 ## What's inside
 
-- 56,217 rows and 567,438 recorded offences
-- 222 months, January 2008 to June 2026, none missing
+- {rows_fmt} rows and {offences_fmt} recorded offences
+- {months} months, {first_name} to {last_name}, none missing
 - 27 locations, including the remote communities that the government's
   "NT Balance" grouping hides
 - Offence category and type exactly as published, plus a simplified `Crime Type`
@@ -170,16 +186,17 @@ under CC BY 4.0.
 These are offences recorded by police, not victims, offenders or court
 outcomes, and they reflect crime that was reported. NT figures are not
 comparable with other Australian jurisdictions.
-"""
+""".format(**s)
 
 
 # File and column descriptions, taken verbatim in substance from
 # DATA_DICTIONARY.md so the Kaggle data card and the shipped documentation can
 # never drift apart.
-COLUMN_DESCRIPTIONS = [
+def column_descriptions(s: dict) -> list:
+    return [
     ("Date", "yearmonth",
-     "Month the offence was reported to NT Police, as YYYY-MM. Runs 2008-01 to 2026-06 with no gaps."),
-    ("Year", "numeric", "Calendar year, 2008-2026. Always agrees with Date."),
+     "Month the offence was reported to NT Police, as YYYY-MM. Runs 2008-01 to " + s["last"] + " with no gaps."),
+    ("Year", "numeric", f"Calendar year, 2008-{s['last_year']}. Always agrees with Date."),
     ("Month number", "numeric", "Month of year, 1 = January through 12 = December."),
     ("Crime Type", "string",
      "Simplified nine-value label available in both eras: Homicide, Assault & Violence, Sexual Offences, "
@@ -209,7 +226,7 @@ COLUMN_DESCRIPTIONS = [
     ("DV involvement", "string",
      "Domestic violence involvement for assault offences: Yes, No, or '-' (not applicable)."),
     ("Data era", "string",
-     "Historical / PROMIS (2008-01 to 2023-11) or Current / SerPro (2023-12 to 2026-06). The NT Police recording "
+     "Historical / PROMIS (2008-01 to 2023-11) or Current / SerPro (2023-12 to " + s["last"] + "). The NT Police recording "
      "system changed between these two periods."),
     ("Source extract", "string",
      "Which official government extract supplied the row: the March 2024 historical extract (2008-01 to 2013-12), "
@@ -223,12 +240,13 @@ COLUMN_DESCRIPTIONS = [
     ("Number of offences", "numeric",
      "Count of offences recorded by NT Police for this combination of month, offence, location and flags. Always 1 "
      "or more; never zero, negative or missing. A row is a count, not a single crime."),
-]
+    ]
 
-FILE_DESCRIPTIONS = {
+def file_descriptions(s: dict) -> dict:
+    return {
     "nt_crime_master.csv":
-        "The dataset. 56,217 rows covering 222 consecutive months, January 2008 to June 2026, with no missing "
-        "months. Each row is a count of offences recorded by NT Police for one combination of month, offence "
+        f"The dataset. {s['rows_fmt']} rows covering {s['months']} consecutive months, {s['first_name']} to "
+        f"{s['last_name']}, with no missing months. Each row is a count of offences recorded by NT Police for one combination of month, offence "
         "category and type, location, and (for assault offences) alcohol and domestic-violence involvement. Read "
         "Number of offences for the count - a row is not a single crime. Assembled from three official NT "
         "Government extracts; every row records which one it came from.",
@@ -241,7 +259,7 @@ FILE_DESCRIPTIONS = {
         "official extracts were used for which periods and why, the two documented breaks in the series "
         "(November 2023 and April 2025), the location and population decisions, what was verified, and the known "
         "limitations.",
-}
+    }
 
 
 # Provenance and cadence, stated exactly as METHODOLOGY.md documents them.
@@ -271,21 +289,21 @@ UPDATE_FREQUENCY = "monthly"
 COVER_IMAGE = "dataset-cover-image.png"
 
 
-def resources_block() -> list:
+def resources_block(s: dict) -> list:
     """Per-file and per-column descriptions for the Kaggle data card."""
     return [
         {
             "path": "nt_crime_master.csv",
-            "description": FILE_DESCRIPTIONS["nt_crime_master.csv"],
+            "description": file_descriptions(s)["nt_crime_master.csv"],
             "schema": {
                 "fields": [
                     {"name": n, "description": d, "type": t}
-                    for n, t, d in COLUMN_DESCRIPTIONS
+                    for n, t, d in column_descriptions(s)
                 ]
             },
         },
-        {"path": "DATA_DICTIONARY.md", "description": FILE_DESCRIPTIONS["DATA_DICTIONARY.md"]},
-        {"path": "METHODOLOGY.md", "description": FILE_DESCRIPTIONS["METHODOLOGY.md"]},
+        {"path": "DATA_DICTIONARY.md", "description": file_descriptions(s)["DATA_DICTIONARY.md"]},
+        {"path": "METHODOLOGY.md", "description": file_descriptions(s)["METHODOLOGY.md"]},
     ]
 
 
@@ -297,14 +315,15 @@ def stage(dest: str, ds_id: str) -> dict:
             raise SystemExit(f"STOP: required upload file missing: {src}")
         shutil.copyfile(src, os.path.join(dest, name))
 
+    s = figures()
     meta = {
-        "title": TITLE,
+        "title": title(s),
         "id": ds_id,
         "licenses": [{"name": LICENSE_SLUG}],
-        "subtitle": SUBTITLE,
-        "description": description(),
+        "subtitle": subtitle(s),
+        "description": description(s),
         "keywords": KEYWORDS,
-        "resources": resources_block(),
+        "resources": resources_block(s),
     }
     with open(os.path.join(dest, "dataset-metadata.json"), "w") as fh:
         json.dump(meta, fh, indent=2)
@@ -339,21 +358,21 @@ def kaggle_cli(args, cwd=None):
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
 
 
-def data_block() -> list:
+def data_block(s: dict) -> list:
     """The same descriptions in the shape the settings endpoint stores."""
     return [
         {
             "name": "nt_crime_master.csv",
-            "description": FILE_DESCRIPTIONS["nt_crime_master.csv"],
+            "description": file_descriptions(s)["nt_crime_master.csv"],
             "columns": [
                 {"name": n, "description": d, "type": t}
-                for n, t, d in COLUMN_DESCRIPTIONS
+                for n, t, d in column_descriptions(s)
             ],
         },
         {"name": "DATA_DICTIONARY.md",
-         "description": FILE_DESCRIPTIONS["DATA_DICTIONARY.md"], "columns": []},
+         "description": file_descriptions(s)["DATA_DICTIONARY.md"], "columns": []},
         {"name": "METHODOLOGY.md",
-         "description": FILE_DESCRIPTIONS["METHODOLOGY.md"], "columns": []},
+         "description": file_descriptions(s)["METHODOLOGY.md"], "columns": []},
     ]
 
 
@@ -361,18 +380,19 @@ def stage_metadata(dest: str, ds_id: str) -> dict:
     """Write dataset-metadata.json (plus the cover image) for a settings-only
     update. No data files: this path changes the data card, not the data."""
     os.makedirs(dest, exist_ok=True)
+    s = figures()
     meta = {
         "id": ds_id,
-        "title": TITLE,
-        "subtitle": SUBTITLE,
-        "description": description(),
+        "title": title(s),
+        "subtitle": subtitle(s),
+        "description": description(s),
         "licenses": [{"name": LICENSE_DISPLAY_NAME}],
         "keywords": KEYWORDS,
-        "resources": resources_block(),
+        "resources": resources_block(s),
         # The settings endpoint stores file/column descriptions under "data".
         # The CLI can derive it from "resources", but sending it explicitly is
         # what actually persists, so provide both.
-        "data": data_block(),
+        "data": data_block(s),
         "userSpecifiedSources": PROVENANCE,
         "expectedUpdateFrequency": UPDATE_FREQUENCY,
         "isPrivate": False,

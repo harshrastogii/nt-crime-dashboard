@@ -67,6 +67,11 @@ NEW_MONTH_MAX = 6_000
 REVISION_PCT_PER_MONTH = 5.0
 REVISION_ABS_PER_MONTH = 150
 HISTORY_TOTAL_PCT = 0.5
+# Offences in vanished current-era keys, as % of current-era offences. Observed
+# rate: 0.0035% in the July 2026 release (3 of 84,862) and the same 0.0035% in
+# the March->April 2024 historical comparison (11 of 310,799). 0.05% is about
+# 14x that, roughly 42 offences today.
+VANISHED_KEY_PCT = 0.05
 
 
 @dataclass
@@ -234,12 +239,43 @@ def validate(new: pd.DataFrame, old: pd.DataFrame | None = None) -> Result:
             r.fail(f"new month {m} has an implausible total: {v:,} offences "
                    f"(expected {NEW_MONTH_MIN:,}-{NEW_MONTH_MAX:,})")
 
-    # 16. every previously published row must still be represented
+    # 16. previously published dimension keys.
+    #
+    # A key can disappear for two different reasons. NT Police correct the
+    # location or flags of individual offences in later releases, so a
+    # one-offence cell leaves one place and reappears in another within the
+    # same month. The July 2026 release moved 3 offences this way, two of them
+    # out of "Unknown / not stated" into a named place. Offences genuinely going
+    # missing is the thing to stop on, and the month-total checks above already
+    # catch large losses. This rule bounds the small ones.
+    #
+    # The pinned history must not change at all, so any vanished key there is
+    # critical. In the current era, vanished keys are reported and become
+    # critical only above VANISHED_KEY_PCT of current-era offences.
     o_keys = old.groupby(KEY[:-1])["Number of offences"].sum()
     n_keys = new.groupby(KEY[:-1])["Number of offences"].sum()
-    lost = o_keys.index.difference(n_keys.index)
+    lost = o_keys.loc[o_keys.index.difference(n_keys.index)]
     if len(lost):
-        r.fail(f"{len(lost)} previously published dimension keys are gone")
+        dates = lost.index.get_level_values("Date")
+        hist_lost = lost[dates <= HISTORY_END]
+        cur_lost = lost[dates > HISTORY_END]
+        r.facts["vanished_keys"] = [
+            {"date": k[0], "offence_type": k[3], "location": k[5],
+             "alcohol": k[6], "dv": k[7], "offences": int(v)}
+            for k, v in lost.items()]
+        if len(hist_lost):
+            r.fail(f"{len(hist_lost)} dimension keys vanished from the pinned history "
+                   f"(<= {HISTORY_END}), carrying {int(hist_lost.sum())} offences")
+        if len(cur_lost):
+            cur_total = int(old.loc[old["Date"] > HISTORY_END, "Number of offences"].sum())
+            pct = int(cur_lost.sum()) / cur_total * 100 if cur_total else 100.0
+            msg = (f"{len(cur_lost)} current-era dimension keys no longer appear, carrying "
+                   f"{int(cur_lost.sum())} offences ({pct:.4f}% of the current era); "
+                   f"usually a later release correcting an offence's location or flags")
+            if pct > VANISHED_KEY_PCT:
+                r.fail(msg + f" - above the {VANISHED_KEY_PCT}% limit")
+            else:
+                r.warn(msg)
 
     r.facts.update({
         "prev_rows": len(old),

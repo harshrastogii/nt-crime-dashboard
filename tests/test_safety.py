@@ -121,7 +121,72 @@ def main():
     code, out = run_simulate(p)
     record("unparseable source", True, code)
 
-    # --- 8. the published master must be untouched throughout -----------
+    # --- 8. an offence's location corrected in a later release ----------
+    # The pattern seen in the real July 2026 release: a one-offence record
+    # leaves one SA2 and reappears in another in the same month. That is the
+    # source improving, and must not block publication.
+    p = os.path.join(tmp, "location_corrected.csv")
+    g = add_month(d)
+    dims = ["Year", "Month number", "Offence category", "Offence type",
+            "Alcohol involvement", "DV involvement", "Reporting Region"]
+    sa2s = sorted(set(g.loc[g["Reporting Region"] == "NT Balance", "Statistical Area 2"]))
+    existing = set(map(tuple, g[dims + ["Statistical Area 2"]].values))
+    moved = 0
+    for idx in g.index[(g["Year"] == "2025") & (g["Number of offences"] == "1")
+                       & (g["Reporting Region"] == "NT Balance")]:
+        row = g.loc[idx]
+        for target in sa2s:
+            key = tuple(row[dims]) + (target,)
+            if target != row["Statistical Area 2"] and key not in existing:
+                existing.discard(tuple(row[dims]) + (row["Statistical Area 2"],))
+                existing.add(key)
+                g.loc[idx, "Statistical Area 2"] = target
+                moved += 1
+                break
+        if moved == 3:
+            break
+    g.to_csv(p, index=False)
+    code, out = run_simulate(p)
+    record("offence locations corrected in a later release", False, code,
+           f" ({moved} moved)")
+
+    # --- 9. offences genuinely missing from the current era -------------
+    # Remove 60 one-offence records spread across 2024-2025, at most three per
+    # month, so no single month moves far enough to trip the revision check.
+    # Only the vanished-key limit can catch this.
+    p = os.path.join(tmp, "offences_lost.csv")
+    g = add_month(d)
+    victims, per_month = [], {}
+    for idx in g.index[g["Year"].isin(["2024", "2025"]) & (g["Number of offences"] == "1")]:
+        m = (g.at[idx, "Year"], g.at[idx, "Month number"])
+        if per_month.get(m, 0) < 3:
+            per_month[m] = per_month.get(m, 0) + 1
+            victims.append(idx)
+        if len(victims) == 60:
+            break
+    g.drop(index=victims).to_csv(p, index=False)
+    code, out = run_simulate(p)
+    record("offences quietly missing from the current era", True, code,
+           f" ({len(victims)} removed)")
+
+    # --- 10. doc wording drift stops the refresh -------------------------
+    from pipeline import refresh_docs, stats
+    docs = tempfile.mkdtemp(prefix="ntdocs_")
+    for rel in ("kaggle/DATA_DICTIONARY.md", "kaggle/METHODOLOGY.md", "README.md"):
+        os.makedirs(os.path.dirname(os.path.join(docs, rel)) or docs, exist_ok=True)
+        text = open(os.path.join(BASE, rel), encoding="utf-8").read()
+        if rel == "README.md":
+            text = text.replace("consecutive months, no gaps", "months back to back")
+        open(os.path.join(docs, rel), "w", encoding="utf-8").write(text)
+    s = stats.load(MASTER)
+    try:
+        refresh_docs.refresh(s, "x.csv", check_only=True, base=docs)
+        code = 0
+    except SystemExit:
+        code = 1
+    record("documentation wording drift", True, code)
+
+    # --- 11. the published master must be untouched throughout ----------
     import hashlib
     h = hashlib.md5(open(MASTER, "rb").read()).hexdigest()
     results.append(("published master untouched by all tests", PASS,
