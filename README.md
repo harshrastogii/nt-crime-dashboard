@@ -27,8 +27,8 @@ Alongside the dashboard, this repo builds and publishes a clean public dataset:
 **Northern Territory Crime Statistics — 2008–2026**.
 
 - **What it is:** every month of recorded crime in the Northern Territory from
-  **January 2008 to June 2026** — 222 consecutive months, no gaps. 56,217 rows,
-  567,438 recorded offences, 27 locations.
+  **January 2008 to July 2026** — 223 consecutive months, no gaps. 56,529 rows,
+  569,982 recorded offences, 27 locations.
 - **Where the data comes from:** the Northern Territory Government's official
   open data portal, <https://data.nt.gov.au/group/law>. Offences are recorded by
   NT Police and published by the Department of the Attorney-General and Justice.

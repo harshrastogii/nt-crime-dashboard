@@ -1,9 +1,9 @@
 # Data Dictionary — NT Crime Master Dataset
 
 **File:** `nt_crime_master.csv`
-**Coverage:** January 2008 → June 2026 (222 months, no gaps)
-**Rows:** 56,217
-**Total offences:** 567,438
+**Coverage:** January 2008 → July 2026 (223 months, no gaps)
+**Rows:** 56,529
+**Total offences:** 569,982
 
 Each row is a count of offences recorded by NT Police for one combination of
 month, offence type, location, and (for assault offences) alcohol and domestic
@@ -45,7 +45,7 @@ International (CC BY 4.0)**.
 | `Population (ABS 2021 reference)` | integer / blank | **A single 2021 Census figure, not a population time series.** See the warning below. |
 | `Alcohol involvement` | text | `Yes`, `No`, or `-`. Recorded for assault offences only; `-` means not applicable. **See the warning below.** |
 | `DV involvement` | text | `Yes`, `No`, or `-`. Domestic violence involvement, assault offences only. |
-| `Data era` | text | `Historical / PROMIS` (2008-01 → 2023-11) or `Current / SerPro` (2023-12 → 2026-06). |
+| `Data era` | text | `Historical / PROMIS` (2008-01 → 2023-11) or `Current / SerPro` (2023-12 → 2026-07). |
 | `Source extract` | text | Which official government file this row came from. Three values — see below. |
 | `is_break_month` | boolean | `True` on the two months where something documented changed: 2023-11 and 2025-04. **The two events are different in kind** — see below. |
 | `Break note` | text | Blank except on the two break months, where it explains what changed. |
@@ -79,7 +79,7 @@ trends as indicative only.
 |---|---|---|
 | `March 2024 historical extract` | 2008-01 → 2013-12 | `nt_crime_statistics_nov_2023_updated_03_24.csv` |
 | `April 2024 historical extract` | 2014-01 → 2023-11 | `nt_crime_statistics_nov_2023_updated_04_24.csv` |
-| `June 2026 current extract` | 2023-12 → 2026-06 | `nt_crime_statistics_june_2026.csv` |
+| `July 2026 current extract` | 2023-12 → 2026-07 | `nt_crime_statistics_july_2026.csv` |
 
 No month is supplied by more than one extract.
 

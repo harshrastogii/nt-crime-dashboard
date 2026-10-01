@@ -50,7 +50,7 @@ Three official extracts, covering three non-overlapping spans:
 |---|---|---|
 | 2008-01 → 2013-12 | March 2024 | The only extract carrying both pre-2014 history and November 2023. |
 | 2014-01 → 2023-11 | April 2024 | Newer revisions than the March file. Its history is truncated at 2014-01, which is why March covers the earlier years. |
-| 2023-12 → 2026-06 | June 2026 | The most recent release of the post-transition series. |
+| 2023-12 → 2026-07 | July 2026 | The most recent release of the post-transition series. |
 
 ### Why two historical extracts instead of one
 
@@ -128,7 +128,7 @@ Rather than pretend they match, this dataset:
 1. **Keeps both government classifications verbatim** in `Offence category` and
    `Offence type`, tagged by `Data era`.
 2. **Adds a simplified `Crime Type`** with nine labels that both eras map onto.
-   All 567,438 offences map successfully; nothing falls into an "other" bucket.
+   All 569,982 offences map successfully; nothing falls into an "other" bucket.
 
 `Crime Type` lets users group both eras using one consistent set of labels. It
 does **not** make the two eras directly comparable — the recording system changed
@@ -175,7 +175,7 @@ No population value was estimated, interpolated, or back-cast.
 
 ## What was verified
 
-- 222 of 222 months present (2008-01 → 2026-06), **no gaps, nothing interpolated**.
+- 223 of 223 months present (2008-01 → 2026-07), **no gaps, nothing interpolated**.
 - No month drawn from more than one extract; no duplicate rows or dimension keys.
 - Each segment reconciles exactly against its source file — 0 records lost,
   0 invented, 0 counts altered.
