@@ -18,7 +18,11 @@ import pandas as pd
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
-SRC = os.path.join(BASE, "data", "nt_crime_statistics_june_2026.csv")
+# The source the published master was built from. The fixtures below build a
+# fake "next month" on top of it, so they must follow the real data forward
+# rather than assume a fixed latest month.
+from pipeline import manifest as _manifest
+SRC = os.path.join(BASE, _manifest.load()["current"]["file"])
 MASTER = os.path.join(BASE, "kaggle", "nt_crime_master.csv")
 
 PASS, FAIL = "PASS", "FAIL"
@@ -45,11 +49,19 @@ def base_df():
     return d
 
 
-def add_month(d, month="7", as_at="4/09/2026"):
-    """A legitimate new month: copy June 2026's shape forward."""
-    jun = d[(d["Year"] == "2026") & (d["Month number"] == "6")].copy()
-    jun["Month number"] = month
-    out = pd.concat([d, jun], ignore_index=True)
+def latest_rows(d):
+    """Rows for the latest month in the source, and the month after it."""
+    ym = pd.PeriodIndex.from_fields(year=d["Year"].astype(int),
+                                    month=d["Month number"].astype(int), freq="M")
+    last = ym.max()
+    return d[ym == last].copy(), last + 1
+
+
+def add_month(d, as_at="1/01/2099"):
+    """A legitimate new month: copy the latest month's shape one month on."""
+    rows, nxt = latest_rows(d)
+    rows["Year"], rows["Month number"] = str(nxt.year), str(nxt.month)
+    out = pd.concat([d, rows], ignore_index=True)
     out["As At"] = as_at
     return out
 
@@ -99,10 +111,11 @@ def main():
 
     # --- 5. implausibly small new month (truncated extract) -------------
     p = os.path.join(tmp, "tiny_month.csv")
-    jun = d[(d["Year"] == "2026") & (d["Month number"] == "6")].head(5).copy()
-    jun["Month number"] = "7"
+    rows, nxt = latest_rows(d)
+    jun = rows.head(5).copy()
+    jun["Year"], jun["Month number"] = str(nxt.year), str(nxt.month)
     g = pd.concat([d, jun], ignore_index=True)
-    g["As At"] = "4/09/2026"
+    g["As At"] = "1/01/2099"
     g.to_csv(p, index=False)
     code, out = run_simulate(p)
     record("new month implausibly small", True, code)

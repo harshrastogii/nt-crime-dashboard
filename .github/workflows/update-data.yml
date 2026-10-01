@@ -17,6 +17,10 @@ on:
         description: "Validate only - do not commit or publish"
         type: boolean
         default: false
+      redeploy:
+        description: "Only re-sync the dashboard with what Kaggle is serving"
+        type: boolean
+        default: false
 
 concurrency:
   group: nt-crime-update
@@ -24,6 +28,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write    # lets this workflow start the dashboard deploy
 
 jobs:
   update:
@@ -59,6 +64,7 @@ jobs:
 
       - name: Check the portal for a newer release
         id: check
+        if: inputs.redeploy != true
         run: |
           set +e
           python -m pipeline.update --check
@@ -111,6 +117,19 @@ jobs:
           # A version push carries the description and subtitle; the title and
           # cover image only change through the settings endpoint.
           python -m pipeline.publish_kaggle --update-metadata
+
+      - name: Wait until Kaggle serves the new release
+        if: (steps.update.outputs.updated == 'true' && inputs.dry_run != true) || inputs.redeploy == true
+        run: python -m pipeline.publish_kaggle --wait-live
+
+      # Pushes made by this workflow do not trigger other workflows, so the
+      # dashboard deploy has to be started explicitly. It runs only once Kaggle
+      # serves the new release, because the dashboard downloads its data there.
+      - name: Redeploy the dashboard
+        if: (steps.update.outputs.updated == 'true' && inputs.dry_run != true) || inputs.redeploy == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main --repo "$GITHUB_REPOSITORY"
 
       - name: Upload the update report
         if: always()

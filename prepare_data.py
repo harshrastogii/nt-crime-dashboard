@@ -1,101 +1,59 @@
 """
-prepare_data.py — NT Crime dashboard data preparation.
-Run once: `python prepare_data.py`  ->  crime_clean.parquet + kaggle/nt_crime_clean.csv
+prepare_data.py — build the dashboard's data from the published Kaggle dataset.
 
-Key design choice (v2): the source 'Reporting Region' lumps ~20 distinct
-Statistical Area 2 (SA2) localities under the single label "NT Balance".
-That hides the Territory's remote communities — exactly the geography NT
-policy focuses on. We therefore build a true `Location` field: the town name
-where the region IS a town, and the SA2 name where the region is "NT Balance".
+    python prepare_data.py            # download from Kaggle, verify, build
+    python prepare_data.py --local    # use kaggle/nt_crime_master.csv (offline)
 
-Key correctness fix (v3): each monthly download from the NT government is a
-CUMULATIVE extract — it contains the ENTIRE history back to Dec 2023, not just
-that month. Concatenating the files therefore counted early months once per
-file (~5.5x inflation overall, worse the further back you go) and mixed in
-superseded figures, since NT revises past months in later releases. We now use
-exactly ONE file: the most recent release. Older files are kept on disk as an
-archive but are not read.
+Writes crime_clean.parquet (read by app.py) and dashboard_source.json (which
+the dashboard shows, so anyone can see exactly what it is built from).
 
-Note on picking the newest file: filenames sort alphabetically as
-apr, feb, jan, june, mar, may — so sorted()[-1] is WRONG. We read the
-authoritative 'As At' release date from inside each file instead.
+Why Kaggle. The dashboard and the public dataset must show the same numbers,
+so the dashboard reads the dataset itself rather than re-deriving it from raw
+government files. The download is checked against the MD5 of the release being
+deployed (data_release.json, written by the deploy workflow). If Kaggle cannot
+be reached or serves something else, the byte-identical copy committed to
+GitHub at the same release is used instead, and the dashboard says so.
+
+Why only the current era. The dashboard compares calendar years and computes
+per-capita rates. The NT Government advises that data from December 2023 onward
+must not be compared with anything earlier, because NT Police changed recording
+systems between November and December 2023, and population is a 2021 reference
+figure supplied only for that period. So the dashboard uses the dataset's
+"Current / SerPro" rows: everything from December 2023 to the latest month.
 """
 
+from __future__ import annotations
+
+import argparse
+import hashlib
+import io
+import json
+import os
+import ssl
+import sys
+import time
+import urllib.request
+import zipfile
+
 import pandas as pd
-import glob, os
 
-DATA_DIR = "data" if os.path.isdir("data") else "."
-CSV_FILES = sorted(glob.glob(os.path.join(DATA_DIR, "*.csv")))
-if not CSV_FILES:
-    raise SystemExit(f"No CSV files found in '{DATA_DIR}/'. Add the NT crime CSVs there and re-run.")
+OWNER_SLUG = "harshrastogiii/northern-territory-crime-statistics-2008-2026"
+KAGGLE_ZIP = f"https://www.kaggle.com/api/v1/datasets/download/{OWNER_SLUG}"
+KAGGLE_INFO = ("https://www.kaggle.com/api/v1/datasets/list?search="
+               + OWNER_SLUG.split("/")[1])
+GITHUB_RAW = ("https://raw.githubusercontent.com/harshrastogii/nt-crime-dashboard/"
+              "{ref}/kaggle/nt_crime_master.csv")
+LOCAL_MASTER = os.path.join("kaggle", "nt_crime_master.csv")
+RELEASE_FILE = "data_release.json"
+CURRENT_ERA = "Current / SerPro"
 
+REQUIRED = ["Date", "Year", "Month number", "Crime Type", "Reporting Region",
+            "Location", "Location Type", "Population (ABS 2021 reference)",
+            "Alcohol involvement", "DV involvement", "Data era",
+            "Number of offences"]
 
-def release_date(path):
-    """The 'As At' value the NT government stamps on every row of a release."""
-    head = pd.read_csv(path, nrows=1)
-    head.columns = [c.strip() for c in head.columns]
-    return pd.to_datetime(head["As At"].iloc[0], dayfirst=True)
-
-
-releases = sorted(((release_date(f), f) for f in CSV_FILES), key=lambda t: t[0])
-as_at, LATEST = releases[-1]
-superseded = [os.path.basename(f) for _, f in releases[:-1]]
-
-print(f"Found {len(CSV_FILES)} cumulative extract(s) in '{DATA_DIR}/'.")
-print(f"Using ONLY the newest: {os.path.basename(LATEST)} (As At {as_at:%d/%m/%Y})")
-if superseded:
-    print(f"Ignoring {len(superseded)} superseded extract(s): " + ", ".join(superseded))
-
-df = pd.read_csv(LATEST)
-df.columns = [c.strip() for c in df.columns]
-for col in ["Offence type", "Offence category", "Reporting Region",
-            "Statistical Area 2", "Alcohol involvement", "DV involvement"]:
-    df[col] = df[col].astype(str).str.strip()
-
-# --- Offence category -> simplified label ---
-CATEGORY_MAP = {
-    "01 Homicide": "Homicide",
-    "02 Assault": "Assault & Violence",
-    "03 Sexual offences": "Sexual Offences",
-    "04 Harm or endanger persons": "Harassment & Threats",
-    "05 Robbery, blackmail, and extortion": "Robbery & Extortion",
-    "061 Burglary - dwelling": "Residential B&E",
-    "062 Burglary - non-residential": "Commercial B&E",
-    "07 Theft": "General Theft",
-    "11 Property damage offences": "Property Damage",
-}
-df["Crime Type"] = df["Offence category"].map(CATEGORY_MAP).fillna("Other Crimes")
-
-# --- TRUE LOCATION: town name, or SA2 name when region is "NT Balance" ---
-df["Location"] = df["Reporting Region"]
-mask = df["Reporting Region"] == "NT Balance"
-df.loc[mask, "Location"] = df.loc[mask, "Statistical Area 2"]
-# Tidy the residual unknowns into one bucket
-df["Location"] = df["Location"].replace({"Unknown": "Unknown / not stated", "nan": "Unknown / not stated"})
-
-# --- Location type (urban / regional / remote) for every location ---
-URBAN = {"Darwin", "Palmerston"}
-REGIONAL = {"Alice Springs", "Katherine", "Tennant Creek"}
-def loc_type(name):
-    if name in URBAN: return "Urban"
-    if name in REGIONAL: return "Regional"
-    return "Remote"  # all SA2 localities + Nhulunbuy are remote
-df["Location Type"] = df["Location"].map(loc_type)
-
-# --- Population (ABS 2021) — towns + SA2s with VERIFIED figures only ---
-# SA2s without a confident public figure are intentionally left as None so the
-# app shows COUNTS for them but never an invented per-capita rate.
-POPULATION = {
-    # towns
-    "Darwin": 139902, "Palmerston": 37247, "Alice Springs": 25912,
-    "Katherine": 10000, "Tennant Creek": 3000, "Nhulunbuy": 4000,
-    # SA2 localities (ABS 2021 Census usual-resident counts; verified)
-    "East Arnhem": 6989, "West Arnhem": 5204, "Tiwi Islands": 2348,
-    # remaining SA2s: population not confidently sourced -> rate suppressed
-}
-df["Population"] = df["Location"].map(POPULATION)  # NaN where unknown
-
-# --- Approx coordinates for the map (towns + SA2 centroids that are sourceable)
+# Approximate coordinates for the map: towns, plus SA2 centroids that could be
+# sourced. Koolpinyah and "Unknown / not stated" have none and are left off it.
 COORDS = {
     "Darwin": (-12.4634, 130.8456), "Palmerston": (-12.4861, 130.9833),
     "Katherine": (-14.4639, 132.2635), "Alice Springs": (-23.6980, 133.8807),
@@ -111,68 +69,158 @@ COORDS = {
     "Humpty Doo": (-12.58, 131.13), "Virginia": (-12.52, 131.02),
     "Weddell": (-12.55, 131.0),
 }
-df["lat"] = df["Location"].map(lambda x: COORDS.get(x, (None, None))[0])
-df["lon"] = df["Location"].map(lambda x: COORDS.get(x, (None, None))[1])
 
-# --- Flags ---
-df["Number of offences"] = pd.to_numeric(df["Number of offences"], errors="coerce").fillna(0).astype(int)
-df["complete_year"] = df["Year"].isin([2024, 2025])
+try:
+    import certifi
+    _SSL = ssl.create_default_context(cafile=certifi.where())
+except Exception:  # certifi absent: fall back to the system trust store
+    _SSL = ssl.create_default_context()
 
-# --- Counting-rule breaks -------------------------------------------------
-# The NT government changed how offences are recorded TWICE. Counts either
-# side of a break are not directly comparable, so every row is stamped with
-# the regime it was recorded under.
-#   Nov 2023 — revised recording practice
-#   Apr 2025 — move to the ANZSOC classification
-period = pd.PeriodIndex.from_fields(year=df["Year"], month=df["Month number"], freq="M")
-BREAK_1 = pd.Period("2023-11", freq="M")   # revised recording practice
-BREAK_2 = pd.Period("2025-04", freq="M")   # ANZSOC reclassification
 
-df["Counting Rules Era"] = pd.Series(
-    pd.cut(
-        period.astype("int64"),
-        bins=[-float("inf"), BREAK_1.ordinal - 1, BREAK_2.ordinal - 1, float("inf")],
-        labels=["Pre-Nov-2023", "Nov-2023 to Mar-2025", "Post-Apr-2025 (ANZSOC)"],
-    ),
-    index=df.index,
-).astype(str)
+def log(msg: str) -> None:
+    print(msg, flush=True)
 
-# True on the first month of each new regime — useful for drawing a break
-# line on a time series.
-df["is_break_month"] = period.isin([BREAK_1, BREAK_2])
 
-# Kept for backwards compatibility with the existing app.
-df["post_anzsoc"] = period >= BREAK_2
+def _get(url: str, tries: int = 3) -> bytes:
+    last = None
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "nt-crime-dashboard"})
+            with urllib.request.urlopen(req, timeout=120, context=_SSL) as r:
+                return r.read()
+        except Exception as exc:
+            last = exc
+            time.sleep(3 * (i + 1))
+    raise RuntimeError(f"{url}: {last}")
 
-keep = ["Year", "Month number", "Crime Type", "Reporting Region", "Location",
-        "Location Type", "Alcohol involvement", "DV involvement",
-        "Population", "lat", "lon", "complete_year", "post_anzsoc",
-        "Counting Rules Era", "is_break_month",
-        "Number of offences"]
-df[keep].to_parquet("crime_clean.parquet", index=False)
 
-n_loc = df["Location"].nunique()
-n_rate = df.dropna(subset=["Population"])["Location"].nunique()
-print(f"Wrote crime_clean.parquet — {len(df):,} rows, {df['Number of offences'].sum():,} offences")
-print(f"Locations: {n_loc} (was 8 regions). With per-capita rates: {n_rate}.")
+def from_kaggle() -> bytes:
+    with zipfile.ZipFile(io.BytesIO(_get(KAGGLE_ZIP))) as z:
+        return z.read("nt_crime_master.csv")
 
-# --- Kaggle-ready CSV -----------------------------------------------------
-# A flat, self-describing publication copy: real place names (not the
-# "NT Balance" catch-all), the population column, and the counting-rule
-# break markers so a downstream user cannot accidentally compare across them.
-KAGGLE_DIR = "kaggle"
-os.makedirs(KAGGLE_DIR, exist_ok=True)
 
-kag = df.copy()
-kag["Date"] = period.to_timestamp().strftime("%Y-%m")
-kag_cols = ["Date", "Year", "Month number", "Crime Type", "Offence category",
-            "Offence type", "Reporting Region", "Location", "Location Type",
-            "Population", "Alcohol involvement", "DV involvement",
-            "Counting Rules Era", "is_break_month", "Number of offences"]
-kag = kag[kag_cols].sort_values(["Date", "Location", "Crime Type"]).reset_index(drop=True)
+def kaggle_version() -> int | None:
+    try:
+        info = json.loads(_get(KAGGLE_INFO))
+        for d in info:
+            if d.get("refNullable", d.get("ref", "")) == OWNER_SLUG or OWNER_SLUG in d.get("urlNullable", ""):
+                return d.get("currentVersionNumber")
+    except Exception:
+        pass
+    return None
 
-kaggle_path = os.path.join(KAGGLE_DIR, "nt_crime_clean.csv")
-kag.to_csv(kaggle_path, index=False)
-print(f"Wrote {kaggle_path} — {len(kag):,} rows, "
-      f"{kag['Date'].min()} to {kag['Date'].max()}, "
-      f"source release As At {as_at:%d/%m/%Y}")
+
+def expected_release() -> dict | None:
+    """What the deployed release should contain. Written by the deploy
+    workflow; for local runs, derived from the committed copy if present."""
+    if os.path.isfile(RELEASE_FILE):
+        with open(RELEASE_FILE) as fh:
+            return json.load(fh)
+    if os.path.isfile(LOCAL_MASTER):
+        blob = open(LOCAL_MASTER, "rb").read()
+        return {"md5": hashlib.md5(blob).hexdigest(), "commit": "main"}
+    return None
+
+
+def acquire(local: bool) -> tuple[bytes, dict]:
+    want = expected_release()
+    want_md5 = (want or {}).get("md5")
+
+    if local:
+        blob = open(LOCAL_MASTER, "rb").read()
+        return blob, {"source": "local copy (kaggle/nt_crime_master.csv)",
+                      "verified": want_md5 == hashlib.md5(blob).hexdigest()}
+
+    attempts = [("Kaggle", from_kaggle)]
+    if want and want.get("commit"):
+        attempts.append(("GitHub copy of the same release",
+                         lambda: _get(GITHUB_RAW.format(ref=want["commit"]))))
+
+    problems = []
+    for name, fetch in attempts:
+        try:
+            blob = fetch()
+        except Exception as exc:
+            problems.append(f"{name} unreachable: {exc}")
+            log(f"  {problems[-1]}")
+            continue
+        md5 = hashlib.md5(blob).hexdigest()
+        if want_md5 and md5 != want_md5:
+            problems.append(f"{name} served md5 {md5}, release is {want_md5}")
+            log(f"  {problems[-1]}")
+            continue
+        return blob, {"source": name, "verified": bool(want_md5),
+                      "fallback_reasons": problems}
+    raise SystemExit("STOP: no source supplied the expected release:\n  " + "\n  ".join(problems))
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--local", action="store_true",
+                    help="build from kaggle/nt_crime_master.csv instead of downloading")
+    args = ap.parse_args(argv)
+
+    log("Fetching the NT crime dataset…")
+    blob, prov = acquire(args.local)
+    md5 = hashlib.md5(blob).hexdigest()
+    master = pd.read_csv(io.BytesIO(blob), low_memory=False)
+
+    missing = [c for c in REQUIRED if c not in master.columns]
+    if missing:
+        raise SystemExit(f"STOP: dataset is missing columns the dashboard needs: {missing}")
+    months = pd.PeriodIndex(sorted(master["Date"].unique()), freq="M")
+    if len(months) != len(pd.period_range(months.min(), months.max(), freq="M")):
+        raise SystemExit("STOP: dataset has missing months")
+
+    df = master[master["Data era"] == CURRENT_ERA].copy()
+    df = df.rename(columns={"Population (ABS 2021 reference)": "Population"})
+    df["lat"] = df["Location"].map(lambda x: COORDS.get(x, (None, None))[0])
+    df["lon"] = df["Location"].map(lambda x: COORDS.get(x, (None, None))[1])
+
+    # A year counts as complete when all twelve of its months are present.
+    months_per_year = df.groupby("Year")["Month number"].nunique()
+    complete = sorted(int(y) for y, n in months_per_year.items() if n == 12)
+    df["complete_year"] = df["Year"].isin(complete)
+    df["post_anzsoc"] = pd.PeriodIndex(df["Date"], freq="M") >= pd.Period("2025-04", freq="M")
+
+    keep = ["Year", "Month number", "Crime Type", "Reporting Region", "Location",
+            "Location Type", "Alcohol involvement", "DV involvement",
+            "Population", "lat", "lon", "complete_year", "post_anzsoc",
+            "Number of offences"]
+    df[keep].to_parquet("crime_clean.parquet", index=False)
+
+    era_months = sorted(df["Date"].unique())
+    partial = {int(y): sorted(int(m) for m in g["Month number"].unique())
+               for y, g in df.groupby("Year") if int(y) not in complete}
+    summary = {
+        "source": prov["source"],
+        "verified_against_release": prov["verified"],
+        "fallback_reasons": prov.get("fallback_reasons", []),
+        "dataset": OWNER_SLUG,
+        "kaggle_version": kaggle_version() if prov["source"] == "Kaggle" else None,
+        "md5": md5,
+        "dataset_rows": len(master),
+        "dataset_offences": int(master["Number of offences"].sum()),
+        "dataset_first": str(months.min()),
+        "dataset_last": str(months.max()),
+        "dashboard_rows": len(df),
+        "dashboard_offences": int(df["Number of offences"].sum()),
+        "dashboard_first": era_months[0],
+        "dashboard_last": era_months[-1],
+        "complete_years": complete,
+        "partial_years": partial,
+        "built_at": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
+    }
+    with open("dashboard_source.json", "w") as fh:
+        json.dump(summary, fh, indent=2)
+
+    log(f"Source: {prov['source']} (md5 {md5}, "
+        f"{'verified against the release' if prov['verified'] else 'not verified'})")
+    log(f"Wrote crime_clean.parquet — {len(df):,} rows, "
+        f"{summary['dashboard_offences']:,} offences, "
+        f"{era_months[0]} to {era_months[-1]} (current era of {len(master):,}-row dataset)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

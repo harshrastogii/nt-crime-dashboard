@@ -9,3 +9,7 @@ kaggle/*.BACKUP_*.csv
 kaggle.json
 *.pem
 .env
+
+# dashboard build artefacts
+dashboard_source.json
+data_release.json

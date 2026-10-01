@@ -429,14 +429,47 @@ def update_metadata() -> int:
     return 0
 
 
+def wait_live(timeout_min: int = 25) -> int:
+    """Block until Kaggle serves exactly the local master CSV.
+
+    A new version takes a few minutes to process after upload. Until it does,
+    an anonymous download still returns the previous release, so anything
+    rebuilt from Kaggle in that window (the dashboard) would show stale data.
+    """
+    import hashlib, io, time, zipfile
+    from . import portal
+    want = hashlib.md5(open(os.path.join(KAGGLE_DIR, "nt_crime_master.csv"), "rb").read()).hexdigest()
+    url = f"https://www.kaggle.com/api/v1/datasets/download/{dataset_id() or 'harshrastogiii/' + DATASET_SLUG}"
+    deadline = time.time() + timeout_min * 60
+    while True:
+        try:
+            with zipfile.ZipFile(io.BytesIO(portal._get(url))) as z:
+                got = hashlib.md5(z.read("nt_crime_master.csv")).hexdigest()
+        except Exception as exc:
+            got = f"unavailable ({exc})"
+        if got == want:
+            print(f"Kaggle is serving the new release (md5 {want}).")
+            return 0
+        if time.time() > deadline:
+            print(f"STOP: after {timeout_min} min Kaggle still serves {got}, expected {want}.")
+            return 1
+        print(f"  Kaggle serves {got}; waiting for {want}…")
+        time.sleep(60)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--wait-live", action="store_true",
+                    help="wait until Kaggle serves the local master CSV")
     ap.add_argument("--update-metadata", action="store_true",
                     help="update the data card only; do not re-upload data")
     ap.add_argument("--message", default="Automated update")
     args = ap.parse_args(argv)
+
+    if args.wait_live:
+        return wait_live()
 
     if args.update_metadata:
         ok, where = have_credentials()

@@ -10,9 +10,51 @@ from dash import dcc, html, Input, Output
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
+import json, os
 import pandas as pd
 
 df = pd.read_parquet("crime_clean.parquet")
+
+# What the data was built from (written by prepare_data.py). The dashboard
+# states this on screen so its figures can be traced to the Kaggle release.
+SRC = {}
+if os.path.isfile("dashboard_source.json"):
+    with open("dashboard_source.json") as _fh:
+        SRC = json.load(_fh)
+
+YEARS = sorted(int(y) for y in df["Year"].unique())
+COMPLETE = sorted(int(y) for y in df.loc[df["complete_year"], "Year"].unique())
+# Year-on-year compares the two most recent complete calendar years.
+Y0, Y1 = (COMPLETE[-2], COMPLETE[-1]) if len(COMPLETE) >= 2 else (None, None)
+FULL_MONTHS = ["January","February","March","April","May","June","July",
+               "August","September","October","November","December"]
+
+def _partial_note():
+    parts = []
+    for y in YEARS:
+        if y in COMPLETE:
+            continue
+        ms = sorted(int(m) for m in df.loc[df["Year"] == y, "Month number"].unique())
+        span = (f"{FULL_MONTHS[ms[0]-1]} only" if len(ms) == 1
+                else f"{FULL_MONTHS[ms[0]-1]}\u2013{FULL_MONTHS[ms[-1]-1]}")
+        parts.append(f"{y} ({span})")
+    if not parts:
+        return ""
+    joined = " and ".join(parts) if len(parts) <= 2 else ", ".join(parts)
+    return f"{joined} {'is a partial year' if len(parts) == 1 else 'are partial years'}, excluded from annual comparisons. "
+
+def _source_note():
+    if not SRC:
+        return "Data source details unavailable for this build."
+    first = pd.Period(SRC["dashboard_first"], freq="M").strftime("%B %Y")
+    last = pd.Period(SRC["dashboard_last"], freq="M").strftime("%B %Y")
+    ver = f" (version {SRC['kaggle_version']})" if SRC.get("kaggle_version") else ""
+    how = ("verified byte-for-byte against the published release"
+           if SRC.get("verified_against_release") else "not verified against a release")
+    origin = ("Kaggle dataset " if SRC["source"] == "Kaggle"
+              else f"{SRC['source']}, mirroring Kaggle dataset ")
+    return (f"Data: {origin}{SRC['dataset']}{ver}, {first} to {last}, {how}. "
+            f"{SRC['dashboard_offences']:,} offences. Built {SRC['built_at']}.")
 CRIME_TYPES = sorted(df["Crime Type"].unique())
 LOC_TYPES = ["Urban", "Regional", "Remote"]
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -99,13 +141,13 @@ app.layout=html.Div(className="tca-page", style={"backgroundColor":PAGE,"color":
         html.Div([html.Div(style={"display":"flex","alignItems":"center","gap":"12px"}, children=[
             html.Div(style={"width":"6px","height":"32px","backgroundColor":ACCENT,"borderRadius":"3px"}),
             html.H1("Territory Crime Atlas", style={"fontWeight":700,"fontSize":"26px","margin":0})]),
-            html.P("Recorded offences, complete calendar years 2024-2025  |  Source: NT Police, NTG Open Data Portal",
+            html.P(f"Recorded offences, complete calendar years {Y0}-{Y1}  |  Source: NT Police, NTG Open Data Portal",
                 style={"color":MUTE,"margin":"6px 0 0 18px","fontSize":"13px"})]),
         html.Div("Built with Python + Dash", style={"fontSize":"12px","color":MUTE})]),
 
     html.Div(style={**CARD,"padding":"16px","marginBottom":"22px","display":"flex","gap":"22px",
         "flexWrap":"wrap","alignItems":"flex-end"}, children=[
-        html.Div([html.Label("Year", style=LBL), dcc.Dropdown([2023,2024,2025,2026],[2024,2025],
+        html.Div([html.Label("Year", style=LBL), dcc.Dropdown(YEARS,[y for y in (Y0,Y1) if y],
             multi=True,id="f-year",clearable=False,style={"minWidth":"190px"})]),
         html.Div([html.Label("Location type", style=LBL), dcc.Dropdown(LOC_TYPES,[],multi=True,
             id="f-loc",placeholder="All locations",style={"minWidth":"170px"})]),
@@ -131,11 +173,14 @@ app.layout=html.Div(className="tca-page", style={"backgroundColor":PAGE,"color":
     html.Div(style={"padding":"14px 16px","backgroundColor":"#fbf7ec","border":"1px solid #ecdfbf",
         "borderRadius":"12px","fontSize":"12.5px","color":"#7a6a2f","lineHeight":1.6}, children=[
         html.Strong("Notes:  "),
-        "2023 (December only) and 2026 (Jan-Mar only) are partial periods, excluded from annual comparisons. "
-        "Category trends cross the April 2025 ANZSOC reclassification. Per-1,000 rates use indicative 2021 census "
-        "populations; small-population regions (e.g. Tennant Creek) have volatile rates. 'NT Balance' aggregates "
-        "remaining NT localities and is excluded from the map as it has no single location. "
-        "Selecting individual months produces small samples, especially for low-population areas, so rates and trends for single months should be read with caution."])])
+        _partial_note(),
+        "Offence categories follow the ANZSOC classification the NT adopted in April 2025 and applied "
+        "retrospectively to this whole period, so they are consistent throughout. Per-1,000 rates use indicative "
+        "2021 census populations; small-population regions (e.g. Tennant Creek) have volatile rates. Koolpinyah and "
+        "offences with no stated location have no map coordinates, so they are left off the map. "
+        "Selecting individual months produces small samples, especially for low-population areas, so rates and trends for single months should be read with caution.",
+        html.Div(_source_note(), id="data-source",
+                 style={"marginTop":"8px","color":"#8a7b45","fontSize":"11.5px"})])])
 
 def fdf(years,locs,crimes,months=None):
     d=df
@@ -163,9 +208,9 @@ def update(years,locs,crimes,mode,months):
     dv=d[d["DV involvement"]=="Yes"]["Number of offences"].sum()
     cy=d[d["complete_year"]]
     by=cy.groupby("Year")["Number of offences"].sum()
-    if {2024,2025}.issubset(by.index):
-        yoy=(by[2025]-by[2024])/by[2024]*100
-        ytxt,ycol=((f"\u25bc {abs(yoy):.0f}%",GOOD) if yoy<0 else (f"\u25b2 {yoy:.0f}%",BAD)); ysub="2024 \u2192 2025"
+    if Y0 and {Y0,Y1}.issubset(by.index):
+        yoy=(by[Y1]-by[Y0])/by[Y0]*100
+        ytxt,ycol=((f"\u25bc {abs(yoy):.0f}%",GOOD) if yoy<0 else (f"\u25b2 {yoy:.0f}%",BAD)); ysub=f"{Y0} \u2192 {Y1}"
     else: ytxt,ycol,ysub="\u2014",MUTE,"needs both full years"
 
     gg=d.groupby("Location").agg(off=("Number of offences","sum"),pop=("Population","first"),
@@ -180,11 +225,11 @@ def update(years,locs,crimes,mode,months):
 
     # ---- dynamic plain-English insight for decision-makers ----
     ins=[]
-    if {2024,2025}.issubset(by.index):
-        d_overall=(by[2025]-by[2024])/by[2024]*100
+    if Y0 and {Y0,Y1}.issubset(by.index):
+        d_overall=(by[Y1]-by[Y0])/by[Y0]*100
         ins.append(html.Span([html.B("Overall, "),
             f"recorded offences {'fell' if d_overall<0 else 'rose'} "
-            f"{abs(d_overall):.0f}% from 2024 to 2025 in this selection. "]))
+            f"{abs(d_overall):.0f}% from {Y0} to {Y1} in this selection. "]))
     if len(gg):
         hi_vol=gg['off'].idxmax()
         hi_rate=gg_rate['rate'].idxmax() if len(gg_rate) else hi_vol
@@ -246,16 +291,16 @@ def update(years,locs,crimes,mode,months):
     # (3) YoY — margins fixed
     piv=cy.groupby(["Location","Year"])["Number of offences"].sum().unstack()
     fig_yoy=go.Figure()
-    if {2024,2025}.issubset(piv.columns):
-        piv=piv.dropna(subset=[2024,2025]); piv=piv[piv.index!="Unknown / not stated"]
-        piv["y"]=(piv[2025]-piv[2024])/piv[2024]*100; piv=piv.sort_values("y")
+    if Y0 and {Y0,Y1}.issubset(piv.columns):
+        piv=piv.dropna(subset=[Y0,Y1]); piv=piv[piv.index!="Unknown / not stated"]
+        piv["y"]=(piv[Y1]-piv[Y0])/piv[Y0]*100; piv=piv.sort_values("y")
         rng=max(abs(piv["y"].min()),abs(piv["y"].max()))*1.25
         fig_yoy=go.Figure(go.Bar(x=piv["y"],y=piv.index,orientation="h",
             marker_color=[GOOD if v<0 else BAD for v in piv["y"]],
             text=[f"{v:+.0f}%" for v in piv["y"]],textposition="outside",cliponaxis=False))
         fig_yoy.update_xaxes(range=[-rng,rng])
     fig_yoy.update_layout(template=T,title="Year-on-year change by region",height=380,
-        margin=dict(l=120,r=50,t=54,b=46),xaxis_title="% change 2024 \u2192 2025",yaxis_title=None)
+        margin=dict(l=120,r=50,t=54,b=46),xaxis_title=f"% change {Y0} \u2192 {Y1}",yaxis_title=None)
 
     # (4) alcohol & DV
     inv=d.groupby("Location").apply(lambda x:pd.Series({

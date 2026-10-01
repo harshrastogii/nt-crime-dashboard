@@ -1,12 +1,24 @@
-# Auto-deploy to Hugging Face Spaces on every push to main.
-# When you push a new CSV (or any change) to GitHub, this pushes it to your
-# Space, which rebuilds and updates the live dashboard automatically.
+# Deploy the dashboard to its Hugging Face Space.
+#
+# Runs on every push to main, when the data-update workflow publishes a new
+# month (it dispatches this workflow once Kaggle is serving the new release),
+# and on demand from the Actions tab.
+#
+# The Space receives a clean snapshot containing only what the dashboard needs,
+# not the repository's history. The dashboard downloads its data from Kaggle
+# when the Space builds, so the large CSVs stay out of the Space entirely. That
+# matters: Hugging Face rejects non-LFS files over 10 MiB, and the master CSV
+# is approaching that size.
 name: Sync to Hugging Face Space
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:   # also lets you trigger it manually from the Actions tab
+  workflow_dispatch:
+
+concurrency:
+  group: hf-deploy
+  cancel-in-progress: true   # the newest deploy is the one that matters
 
 jobs:
   sync-to-hub:
@@ -15,12 +27,30 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           lfs: true
+
+      - name: Record which data release this deploy expects
+        run: python3 scripts/write_release.py data_release.json
+
+      - name: Build a clean snapshot of the dashboard
+        run: |
+          SPACE=/tmp/space
+          mkdir -p "$SPACE/assets"
+          cp app.py prepare_data.py Dockerfile requirements.txt README.md \
+             .gitattributes data_release.json "$SPACE/"
+          cp assets/mobile.css assets/favicon.png "$SPACE/assets/"
+          cd "$SPACE"
+          git init -q -b main
+          git lfs install --local >/dev/null
+          git add -A
+          git -c user.name="harshrastogii" -c user.email="harshrastogi636@gmail.com" \
+              commit -q -m "Deploy ${GITHUB_SHA::7}"
+          echo "Snapshot contents:"; git ls-files | sed 's/^/  /'
+
       - name: Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git rm --cached -r --ignore-unmatch "*.png" "*.jpg" "*.jpeg" "*.ico" >/dev/null 2>&1 || true
-          git commit -m "strip images for HF" >/dev/null 2>&1 || true
-          git push https://harshrastogii:$HF_TOKEN@huggingface.co/spaces/harshrastogii/nt-crime-dashboard main --force
+          cd /tmp/space
+          git push --force \
+            "https://harshrastogii:${HF_TOKEN}@huggingface.co/spaces/harshrastogii/nt-crime-dashboard" main
