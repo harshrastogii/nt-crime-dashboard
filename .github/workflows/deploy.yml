@@ -35,10 +35,11 @@ jobs:
       - name: Build a clean snapshot of the dashboard
         run: |
           SPACE=/tmp/space
-          mkdir -p "$SPACE/assets"
+          mkdir -p "$SPACE"
           cp app.py prepare_data.py Dockerfile requirements.txt README.md \
              .gitattributes data_release.json "$SPACE/"
-          cp assets/mobile.css assets/favicon.png "$SPACE/assets/"
+          # Styles, scripts, icons and illustrations the dashboard loads.
+          cp -r assets "$SPACE/"
           cd "$SPACE"
           git init -q -b main
           git lfs install --local >/dev/null
