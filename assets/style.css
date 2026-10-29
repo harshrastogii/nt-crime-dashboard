@@ -1,0 +1,62 @@
+/* Motion and interaction styling for the Territory Crime Atlas.
+   Every animation is switched off for visitors who ask for reduced motion. */
+
+/* Cards rise into place on first load, a beat apart. */
+@keyframes tca-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.tca-card { background: #fff; border: 1px solid #e6e9ee; border-radius: 14px;
+            box-shadow: 0 1px 3px rgba(16,24,40,0.05);
+            animation: tca-rise .5s ease-out both;
+            transition: box-shadow .2s ease, transform .2s ease; }
+.tca-card:hover { box-shadow: 0 6px 18px rgba(16,24,40,0.08); }
+.tca-grid-4 > .tca-card:nth-child(2), .tca-grid-2 > .tca-card:nth-child(2), .tca-steps > div:nth-child(2) { animation-delay: .08s; }
+.tca-grid-4 > .tca-card:nth-child(3), .tca-steps > div:nth-child(3) { animation-delay: .16s; }
+.tca-grid-4 > .tca-card:nth-child(4) { animation-delay: .24s; }
+
+.tca-kpi:hover { transform: translateY(-2px); }
+
+/* While a chart recomputes, keep the previous render visible but dimmed:
+   no skeleton, no layout jump. */
+.tca-card [data-dash-is-loading="true"] { opacity: .5; transition: opacity .15s; }
+.tca-card .dash-graph { transition: opacity .3s; }
+
+/* Charts that react to clicks show a pointer. */
+.tca-clickable .nsewdrag, .tca-clickable .maplibregl-canvas { cursor: pointer !important; }
+
+/* Buttons */
+.tca-btn { border: 1px solid #d9dee4; background: #fff; color: #1f2733; border-radius: 999px;
+           padding: 6px 13px; font: inherit; font-size: 12.5px; cursor: pointer;
+           display: inline-flex; align-items: center; gap: 6px;
+           transition: background .15s, border-color .15s, color .15s, transform .1s; }
+.tca-btn:hover { border-color: #0d6e7d; color: #0d6e7d; }
+.tca-btn:active { transform: scale(.97); }
+.tca-btn:focus-visible { outline: 2px solid #008c9e; outline-offset: 2px; }
+.tca-btn.is-active { background: #0d6e7d; border-color: #0d6e7d; color: #fff; }
+.tca-btn img { width: 14px; height: 14px; }
+
+/* Focus banner */
+@keyframes tca-pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+.tca-focus { animation: tca-pop .25s ease-out both; }
+
+/* Period slider handles in the brand colour. */
+.tca-card .rc-slider-track, .tca-card .dash-slider-range { background-color: #0d6e7d !important; }
+.tca-card .rc-slider-handle, .tca-card .dash-slider-thumb { border-color: #0d6e7d !important; background-color: #0d6e7d !important; }
+
+/* Shrink the map's tile attribution: the credit stays visible (a Carto/OSM
+   licence requirement) without dominating the card. */
+.maplibregl-ctrl-attrib, .mapboxgl-ctrl-attrib,
+.maplibregl-ctrl-attrib-inner, .mapboxgl-ctrl-attrib-inner {
+  font-size: 9px !important; line-height: 12px !important; color: #9aa0aa !important;
+  background: rgba(255,255,255,0.6) !important; padding: 0 4px !important; }
+.maplibregl-ctrl-attrib a, .mapboxgl-ctrl-attrib a { color: #9aa0aa !important; }
+.maplibregl-ctrl-bottom-right { bottom: 2px !important; right: 2px !important; }
+.maplibregl-ctrl-attrib-button, .mapboxgl-ctrl-attrib-button { display: none !important; }
+.maplibregl-ctrl-attrib.maplibregl-compact, .mapboxgl-ctrl-attrib.mapboxgl-compact {
+  min-height: auto !important; padding: 0 4px !important; }
+.maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner,
+.maplibregl-ctrl-attrib-inner { display: block !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tca-card, .tca-focus { animation: none !important; }
+  .tca-card, .tca-btn { transition: none !important; }
+  .tca-kpi:hover { transform: none; }
+}

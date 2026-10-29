@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -6 216 332" role="img" aria-label="Map of the Northern Territory with its main towns">
+<style>
+  .land { fill: #e3f0f2; stroke: #0d6e7d; stroke-width: 2; stroke-linejoin: round; }
+  .dot { fill: #0d6e7d; }
+  .ring { fill: none; stroke: #008c9e; stroke-width: 2; transform-box: fill-box; transform-origin: center;
+          animation: pulse 2.5s ease-out infinite; opacity: 0; }
+  @keyframes pulse { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(3.2); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .ring { animation: none; } }
+</style>
+<path class="land" d="M12.0,86.0 L20.0,76.0 L26.0,62.0 L34.0,52.0 L38.0,42.0 L48.0,36.0 L52.0,32.0 L60.0,32.0 L72.0,20.0 L84.0,14.0 L90.0,22.0 L100.0,24.0 L112.0,26.0 L128.0,28.0 L140.0,28.0 L150.0,26.0 L164.0,28.0 L170.0,34.0 L162.0,46.0 L152.0,52.0 L150.0,64.0 L142.0,80.0 L144.0,88.0 L156.0,96.0 L168.0,104.0 L180.0,110.0 L192.0,118.0 L192.0,308.0 L12.0,308.0 Z"/>
+<ellipse class="land" cx="48.0" cy="20.0" rx="15.0" ry="6.0"/>
+<ellipse class="land" cx="164.0" cy="68.0" rx="6.0" ry="5.6"/>
+<circle class="ring" style="animation-delay:0.0s" cx="49.0" cy="37.2" r="5"/><circle class="dot" cx="49.0" cy="37.2" r="4"><title>Darwin</title></circle>
+<circle class="ring" style="animation-delay:0.5s" cx="167.6" cy="31.6" r="5"/><circle class="dot" cx="167.6" cy="31.6" r="4"><title>Nhulunbuy</title></circle>
+<circle class="ring" style="animation-delay:1.0s" cx="77.2" cy="77.2" r="5"/><circle class="dot" cx="77.2" cy="77.2" r="4"><title>Katherine</title></circle>
+<circle class="ring" style="animation-delay:1.5s" cx="115.8" cy="181.0" r="5"/><circle class="dot" cx="115.8" cy="181.0" r="4"><title>Tennant Creek</title></circle>
+<circle class="ring" style="animation-delay:2.0s" cx="109.6" cy="262.0" r="5"/><circle class="dot" cx="109.6" cy="262.0" r="4"><title>Alice Springs</title></circle>
+</svg>
