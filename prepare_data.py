@@ -14,12 +14,20 @@ deployed (data_release.json, written by the deploy workflow). If Kaggle cannot
 be reached or serves something else, the byte-identical copy committed to
 GitHub at the same release is used instead, and the dashboard says so.
 
-Why only the current era. The dashboard compares calendar years and computes
-per-capita rates. The NT Government advises that data from December 2023 onward
-must not be compared with anything earlier, because NT Police changed recording
-systems between November and December 2023, and population is a 2021 reference
-figure supplied only for that period. So the dashboard uses the dataset's
-"Current / SerPro" rows: everything from December 2023 to the latest month.
+Why the whole series, and how the November 2023 break is handled. The
+dashboard shows every month in the dataset, January 2008 to the latest release.
+NT Police changed recording systems (PROMIS to SerPro) between November and
+December 2023, and the NT Government advises against comparing the two periods
+directly. Rather than drop either side, every row keeps its "Data era" tag and
+the dashboard uses it: rolling averages are computed within one era, the trend
+chart marks the break, and any comparison that spans it is labelled indicative.
+Offences are grouped with the dataset's "Crime Type", the one offence field
+that has the same nine labels in both eras.
+
+Population is the ABS 2021 Census reference the dataset supplies for the
+current era. The dashboard applies that same figure to every period as an
+indicative denominator and says so on screen; it is never back-cast into the
+published dataset itself.
 """
 
 from __future__ import annotations
@@ -46,6 +54,7 @@ GITHUB_RAW = ("https://raw.githubusercontent.com/harshrastogii/nt-crime-dashboar
 LOCAL_MASTER = os.path.join("kaggle", "nt_crime_master.csv")
 RELEASE_FILE = "data_release.json"
 CURRENT_ERA = "Current / SerPro"
+HISTORICAL_ERA = "Historical / PROMIS"
 
 REQUIRED = ["Date", "Year", "Month number", "Crime Type", "Reporting Region",
             "Location", "Location Type", "Population (ABS 2021 reference)",
@@ -172,8 +181,14 @@ def main(argv=None) -> int:
     if len(months) != len(pd.period_range(months.min(), months.max(), freq="M")):
         raise SystemExit("STOP: dataset has missing months")
 
-    df = master[master["Data era"] == CURRENT_ERA].copy()
-    df = df.rename(columns={"Population (ABS 2021 reference)": "Population"})
+    df = master.rename(columns={"Population (ABS 2021 reference)": "Population"})
+    eras = set(df["Data era"].unique())
+    if eras - {CURRENT_ERA, HISTORICAL_ERA}:
+        raise SystemExit(f"STOP: unexpected Data era values: {sorted(eras)}")
+    # The dataset carries population on current-era rows only. One 2021 figure
+    # per location, used here as an indicative denominator for every period.
+    pop = df.dropna(subset=["Population"]).groupby("Location")["Population"].first()
+    df["Population"] = df["Location"].map(pop)
     df["lat"] = df["Location"].map(lambda x: COORDS.get(x, (None, None))[0])
     df["lon"] = df["Location"].map(lambda x: COORDS.get(x, (None, None))[1])
 
@@ -183,13 +198,13 @@ def main(argv=None) -> int:
     df["complete_year"] = df["Year"].isin(complete)
     df["post_anzsoc"] = pd.PeriodIndex(df["Date"], freq="M") >= pd.Period("2025-04", freq="M")
 
-    keep = ["Year", "Month number", "Crime Type", "Reporting Region", "Location",
-            "Location Type", "Alcohol involvement", "DV involvement",
-            "Population", "lat", "lon", "complete_year", "post_anzsoc",
-            "Number of offences"]
+    keep = ["Date", "Year", "Month number", "Crime Type", "Reporting Region",
+            "Location", "Location Type", "Alcohol involvement", "DV involvement",
+            "Data era", "is_break_month", "Population", "lat", "lon",
+            "complete_year", "post_anzsoc", "Number of offences"]
     df[keep].to_parquet("crime_clean.parquet", index=False)
 
-    era_months = sorted(df["Date"].unique())
+    era_span = {e: [g["Date"].min(), g["Date"].max()] for e, g in df.groupby("Data era")}
     partial = {int(y): sorted(int(m) for m in g["Month number"].unique())
                for y, g in df.groupby("Year") if int(y) not in complete}
     summary = {
@@ -205,8 +220,10 @@ def main(argv=None) -> int:
         "dataset_last": str(months.max()),
         "dashboard_rows": len(df),
         "dashboard_offences": int(df["Number of offences"].sum()),
-        "dashboard_first": era_months[0],
-        "dashboard_last": era_months[-1],
+        "dashboard_first": str(months.min()),
+        "dashboard_last": str(months.max()),
+        "dashboard_months": len(months),
+        "eras": era_span,
         "complete_years": complete,
         "partial_years": partial,
         "built_at": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
@@ -218,7 +235,7 @@ def main(argv=None) -> int:
         f"{'verified against the release' if prov['verified'] else 'not verified'})")
     log(f"Wrote crime_clean.parquet — {len(df):,} rows, "
         f"{summary['dashboard_offences']:,} offences, "
-        f"{era_months[0]} to {era_months[-1]} (current era of {len(master):,}-row dataset)")
+        f"{months.min()} to {months.max()} ({len(months)} months, both recording eras)")
     return 0
 
 

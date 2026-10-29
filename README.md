@@ -123,16 +123,17 @@ The original version was a Power BI report. It looked fine, but it had two limit
 
 ## The headline finding
 
-Ranked by **raw offence counts**, Darwin looks like the Territory's crime centre — it has the largest population, so it has the most offences. But ranked **per 1,000 residents**, the picture inverts: **Tennant Creek's rate is roughly 7× Darwin's.** Resourcing decisions made on raw volume alone systematically under-serve smaller remote communities. The dashboard opens in per-capita mode for exactly this reason, and a plain-English summary states it up front.
+Ranked by **raw offence counts**, Darwin looks like the Territory's crime centre — it has the largest population, so it has the most offences. But ranked **per 1,000 residents**, the picture inverts: **Tennant Creek's rate is roughly 5× Darwin's across 2008–2026, and about 7× since December 2023.** Resourcing decisions made on raw volume alone systematically under-serve smaller remote communities. The dashboard opens in per-capita mode for exactly this reason, and a plain-English summary states it up front.
 
 ## What's on the dashboard
 
+- **Monthly trend, 2008 onward** — every month in the dataset, with a 12-month average that restarts after the November 2023 recording-system change so it never blends the two systems. The change is marked on the chart and November 2023 is flagged provisional.
 - **Decision row** — a ranked "where crime hits hardest" chart (per-capita by default) beside a tile map of crime intensity across the Territory.
 - **Year-on-year change by region** — in the same format the NT Government uses to report progress.
 - **Alcohol & DV involvement by location** — the two factors tied to current NT alcohol-supply policy.
 - **Seasonality** — monthly offences indexed to each region's own average, so the seasonal *pattern* is visible rather than washed out by a flat all-region total.
 - **Crime mix by location** — each location's offences as a percentage, revealing distinct "fingerprints" (Darwin/Palmerston are theft-led; remote areas are assault-led).
-- Filters for year, location type, and crime type cross-filter every chart.
+- A **period slider** (any month range from January 2008 to the latest release) with one-click presets for the whole series, the period before the change, and the period after it; plus filters for location type, crime type, and month. Every chart cross-filters.
 
 ## Geographic granularity
 
@@ -142,9 +143,10 @@ The source data lumps ~20 distinct localities under a single "NT Balance" label.
 
 These are the judgment calls behind the numbers:
 
-- **Partial years excluded.** The data contains a December-only 2023 and a January–March 2026. Plotting these as full years would mislead, so annual comparisons use the two complete years (2024, 2025) only.
-- **Consistent categories.** The NT adopted the 2023 ANZSOC offence classification in April 2025 and applied it retrospectively to the whole period the dashboard covers, so categories do not shift partway through.
-- **Per-capita rates are indicative, and only shown where defensible.** Rates use 2021 ABS census populations for the seven towns plus the SA2 localities with confidently sourced figures. Locations without a reliable population show **counts only** — no invented rate. Small-population areas have volatile rates and are labelled approximate.
+- **The whole series, with the November 2023 break handled rather than hidden.** NT Police moved from PROMIS to SerPro between November and December 2023, and the NT Government advises against comparing the two periods directly. The dashboard keeps both: the trend chart marks the change and computes its rolling average separately on each side, the period presets select one recording system in a click, and any year-on-year figure whose comparison spans the change is greyed out and labelled indicative. The break month is read from the dataset's `Data era` tag, not hard-coded.
+- **Like-for-like year-on-year.** Year-on-year compares the latest year in the selected period with the same months of the year before, so a partial year (e.g. January–August 2026) is compared fairly instead of being dropped.
+- **Consistent categories.** Charts group offences by the dataset's nine harmonised `Crime Type` labels, the one offence field with the same values in both recording eras.
+- **Per-capita rates are indicative, and only shown where defensible.** Rates are annualised (per 1,000 residents a year), so they mean the same thing for one month or eighteen years. They use 2021 ABS census populations for the seven towns plus the SA2 localities with confidently sourced figures, applied to every period, so rates for years far from 2021 are more approximate. Locations without a reliable population show **counts only** — no invented rate. Small-population areas have volatile rates and are labelled approximate.
 - **"NT Balance" coordinates are approximate.** SA2 map points are indicative centroids, not official ABS centroids.
 
 ## Where the dashboard's data comes from
@@ -157,8 +159,10 @@ code. If Kaggle cannot be reached, it uses the byte-identical copy committed to
 GitHub for the same release. The footer of the dashboard says which source was
 used and which Kaggle version it is.
 
-It uses the dataset's current-era rows, December 2023 onward. Its year-on-year
-comparisons and per-capita rates are only valid within one recording era.
+It uses every month in the dataset, January 2008 onward, from both recording
+eras. Each row keeps its `Data era` tag, which the dashboard uses to mark the
+November 2023 recording-system change and to label any comparison that spans
+it as indicative.
 
 Nothing needs uploading by hand. When the NT publishes a new month, the update
 workflow adds it to the dataset, publishes it to Kaggle, waits until Kaggle is
