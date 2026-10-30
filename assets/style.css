@@ -14,6 +14,10 @@
 
 .tca-kpi:hover { transform: translateY(-2px); }
 
+/* Each animated card is its own stacking layer, so later cards would paint
+   over the filter panel's open dropdown menus. Keep the panel on top. */
+.tca-controls { position: relative; z-index: 30; }
+
 /* While a chart recomputes, keep the previous render visible but dimmed:
    no skeleton, no layout jump. */
 .tca-card [data-dash-is-loading="true"] { opacity: .5; transition: opacity .15s; }

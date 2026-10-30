@@ -200,7 +200,7 @@ app.layout=html.Div(className="tca-page", style={"backgroundColor":PAGE,"color":
         step(2,"pointer","Click any place","Click a bar, bubble or heatmap row to focus the whole page on that location."),
         step(3,"play","Press play","Replay every year since 2008 and watch the rankings shift.")]),
 
-    html.Div(className="tca-card", style={"padding":"16px","marginBottom":"18px"}, children=[
+    html.Div(className="tca-card tca-controls", style={"padding":"16px","marginBottom":"18px"}, children=[
         html.Div(style={"display":"flex","justifyContent":"space-between","alignItems":"center",
             "flexWrap":"wrap","gap":"8px","marginBottom":"6px"}, children=[
             html.Div([html.Span("Period", style={**LBL,"display":"inline","marginRight":"8px"}),
