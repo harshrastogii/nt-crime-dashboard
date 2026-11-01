@@ -6,6 +6,11 @@ Why the API and not scraping: the portal is CKAN, so package_search returns
 every dataset with its resources, licence and timestamps in one call. That is
 stable, documented, and does not break when the site's HTML changes.
 
+The portal's search server fails on its own from time to time ("Unable to
+connect to the search server", late October 2026) while the rest of the API
+keeps working. When search fails, discovery falls back to package_list plus
+package_show for each crime dataset, which returns the same datasets.
+
 Why we never trust filenames: the portal has demonstrably lied by name before.
 The dataset titled "NT Crime Statistics November 2023" contained no November
 2023 data; November 2023 arrived months later as a supplementary CSV attached
@@ -74,14 +79,43 @@ class Candidate:
         return asdict(self)
 
 
-def list_candidates() -> list[Candidate]:
-    """Every CSV resource on every NT Crime Statistics dataset page."""
+def _search_packages() -> list[dict]:
     url = f"{API}/package_search?q={urllib.parse.quote(SEARCH_QUERY)}&rows=1000"
     payload = json.loads(_get(url))
     if not payload.get("success"):
         raise PortalError("CKAN package_search returned success=false")
+    return payload["result"]["results"]
 
-    results = payload["result"]["results"]
+
+def _listed_packages() -> list[dict]:
+    """The same datasets as the search, without the search server: every
+    dataset whose name mentions crime, kept if its title or description
+    contains the search phrase."""
+    payload = json.loads(_get(f"{API}/package_list"))
+    if not payload.get("success"):
+        raise PortalError("CKAN package_list returned success=false")
+    phrase = SEARCH_QUERY.strip('"').lower()
+    out = []
+    for name in payload["result"]:
+        if "crime" not in name.lower():
+            continue
+        show = json.loads(_get(f"{API}/package_show?id={urllib.parse.quote(name)}"))
+        if not show.get("success"):
+            raise PortalError(f"CKAN package_show returned success=false for {name}")
+        pkg = show["result"]
+        if phrase in f"{pkg.get('title', '')} {pkg.get('notes') or ''}".lower():
+            out.append(pkg)
+    return out
+
+
+def list_candidates(log=lambda msg: None) -> list[Candidate]:
+    """Every CSV resource on every NT Crime Statistics dataset page."""
+    try:
+        results = _search_packages()
+    except PortalError as exc:
+        log(f"  search unavailable ({str(exc).splitlines()[-1].strip()}); "
+            "listing datasets one by one instead")
+        results = _listed_packages()
     if not results:
         raise PortalError("CKAN returned zero datasets - refusing to proceed")
 

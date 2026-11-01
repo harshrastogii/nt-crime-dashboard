@@ -277,7 +277,7 @@ def main(argv=None):
     else:
         log("Querying the NT Open Data Portal (CKAN)…")
         try:
-            cands = portal.list_candidates()
+            cands = portal.list_candidates(log)
         except portal.PortalError as exc:
             log(f"STOP: {exc}")
             return 2
