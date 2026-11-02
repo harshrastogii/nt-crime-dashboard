@@ -60,7 +60,9 @@ jobs:
           fi
 
       - name: Run the safety test suite
-        run: python tests/test_safety.py
+        run: |
+          python tests/test_safety.py
+          python tests/test_portal.py
 
       - name: Check the portal for a newer release
         id: check
