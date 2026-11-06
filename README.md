@@ -206,3 +206,8 @@ assets/               # styles, motion script, icons, NT illustration, favicon
 ## Data source
 
 Recorded-offence data published by NT Police via the Northern Territory Government Open Data Portal. This is an independent analysis and is not affiliated with or endorsed by the NT Government or NT Police.
+
+## Licence
+
+- **Code:** MIT (see [`LICENSE`](LICENSE)).
+- **Data:** the published dataset is CC BY 4.0 on Kaggle. The source data is NT Government open data under CC BY and keeps its own terms; credit NT Police and the Northern Territory Government when you reuse it.
