@@ -25,6 +25,7 @@ import hashlib
 import json
 import ssl
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, asdict
@@ -49,18 +50,26 @@ class PortalError(RuntimeError):
     """The portal could not be reached or returned something unusable."""
 
 
-def _get(url: str, retries: int = 3, backoff: float = 3.0) -> bytes:
-    last = None
+class PortalUnavailable(PortalError):
+    """The portal's servers are down: network errors, timeouts or HTTP 5xx.
+    Nothing is wrong with the data or the pipeline; try again later."""
+
+
+def _get(url: str, retries: int = 4, backoff: float = 5.0) -> bytes:
+    last, server_side = None, True
     for attempt in range(retries):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
             with urllib.request.urlopen(req, timeout=TIMEOUT, context=_SSL_CTX) as resp:
                 return resp.read()
-        except Exception as exc:  # network, HTTP, timeout
-            last = exc
-            if attempt < retries - 1:
-                time.sleep(backoff * (attempt + 1))
-    raise PortalError(f"GET failed after {retries} attempts: {url}\n  {last}")
+        except urllib.error.HTTPError as exc:
+            last, server_side = exc, exc.code >= 500 or exc.code == 429
+        except Exception as exc:  # network, timeout
+            last, server_side = exc, True
+        if attempt < retries - 1:
+            time.sleep(backoff * (attempt + 1))
+    err = PortalUnavailable if server_side else PortalError
+    raise err(f"GET failed after {retries} attempts: {url}\n  {last}")
 
 
 @dataclass

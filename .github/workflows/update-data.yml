@@ -76,11 +76,30 @@ jobs:
         id: update
         if: steps.check.outputs.status == '3'
         run: |
+          set +e
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             python -m pipeline.update --dry-run
           else
             python -m pipeline.update
           fi
+          code=$?
+          # 4: the portal went down after the check found a new month. Nothing
+          # was written; the next scheduled run picks the update up.
+          if [ "$code" = "4" ]; then
+            echo "::warning::The NT portal went down mid-update. Nothing was published; the next run will retry."
+            exit 0
+          fi
+          exit $code
+
+      # The NT portal's own servers were down. That is the government's
+      # outage, not a fault in this project, so it is a warning, not a failure.
+      # The pipeline returns 1 instead once the data falls more than three
+      # months behind, so a long outage still fails loudly.
+      - name: Note a portal outage
+        if: steps.check.outputs.status == '4'
+        run: |
+          echo "::warning::The NT Open Data portal was down today. Nothing was \
+          changed or published. The next scheduled run will check again."
 
       - name: Stop if the portal could not be understood
         if: steps.check.outputs.status == '1' || steps.check.outputs.status == '2'
