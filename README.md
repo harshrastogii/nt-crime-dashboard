@@ -96,6 +96,12 @@ publishes nothing**, and writes `kaggle/UPDATE_REPORT.md` explaining why. If the
 government publishes something that would change the pinned historical period,
 that is reported for review and never applied automatically.
 
+If the NT portal itself is down, the run ends with a warning instead of a
+failure: nothing changes, and the next day's run checks again. When the
+portal's search is down but the rest of it works, the pipeline lists the
+datasets instead. An outage only fails the run once the data is more than
+three months behind, because by then a release is overdue.
+
 Run it yourself:
 
 ```bash

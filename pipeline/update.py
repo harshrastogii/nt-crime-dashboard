@@ -11,6 +11,9 @@ Exit codes:  0 = up to date or updated successfully
              1 = STOP, a safety check failed (never publishes)
              2 = the portal or a source file could not be understood
              3 = an update is available but this run was read-only
+             4 = the NT portal's servers are down; nothing changed. Becomes 1
+                 once the master is more than STALE_AFTER_MONTHS behind, so a
+                 long outage cannot hide behind this code
 
 Nothing here writes to kaggle/ unless every critical validation passes.
 """
@@ -35,22 +38,53 @@ MASTER = os.path.join(BASE, "kaggle", "nt_crime_master.csv")
 REPORT = os.path.join(BASE, "kaggle", "UPDATE_REPORT.md")
 DATA_DIR = os.path.join(BASE, "data")
 SERPRO_START = pd.Period("2023-12", freq="M")
+# The NT publishes a month about five weeks after it ends, so in November the
+# newest month is normally September. Three months behind means a release is
+# overdue, not just late.
+STALE_AFTER_MONTHS = 3
 
 
 def log(msg): print(msg, flush=True)
 
 
+def months_behind(prev_last, today=None) -> int:
+    """Whole months between the master's newest month and today's month."""
+    now = pd.Period(today or dt.date.today(), freq="M")
+    return (now - pd.Period(prev_last, freq="M")).n
+
+
+def portal_down(reason, prev_last, today=None) -> int:
+    """The portal's servers are down. That is the government's outage, not a
+    fault here, so report it and wait - unless the data is falling behind."""
+    log(f"NT portal unavailable: {reason}")
+    if prev_last is not None:
+        behind = months_behind(prev_last, today)
+        if behind > STALE_AFTER_MONTHS:
+            log(f"STOP: the newest month we have is {prev_last}, {behind} months ago, "
+                "and the portal cannot be checked. A release is overdue - look at the portal.")
+            return 1
+    log("Nothing changed. The next scheduled run will check again.")
+    return 4
+
+
 # --------------------------------------------------------------------------
 # discovery
 # --------------------------------------------------------------------------
-def discover_current(cands) -> tuple[dict, list]:
+def discover_current(cands) -> tuple[dict, list, bool]:
     """Find the candidate that best serves the CURRENT (SerPro) period.
 
     We inspect contents, never filenames. The winner is the SerPro-era file
     that reaches the latest crime month; ties break on the later 'As At'.
+    The third value is True when downloads failed because the portal was
+    down, so the caller can tell an outage from unusable files.
     """
-    notes, viable = [], []
+    notes, viable, down_in_a_row = [], [], 0
     for c in cands:
+        # Three failed downloads in a row with the servers down: stop rather
+        # than wait out the retries on every remaining file.
+        if down_in_a_row >= 3:
+            notes.append("stopped downloading: the portal went down mid-run")
+            break
         # Only fetch things plausibly in the current era. Every SerPro release
         # so far is a page whose title is a month from 2024 onward, but we do
         # not rely on that - we fetch and inspect. To keep the run cheap we
@@ -59,8 +93,10 @@ def discover_current(cands) -> tuple[dict, list]:
             blob, md5 = portal.fetch_bytes(c.url)
             df, rep = inspect_csv.inspect_source(blob)
         except Exception as exc:
+            down_in_a_row = down_in_a_row + 1 if isinstance(exc, portal.PortalUnavailable) else 0
             notes.append(f"could not read {c.resource_name or c.url}: {exc}")
             continue
+        down_in_a_row = 0
         if rep.era != "Current / SerPro":
             continue
         if not rep.ok:
@@ -69,9 +105,9 @@ def discover_current(cands) -> tuple[dict, list]:
         viable.append({"cand": c, "report": rep, "md5": md5, "blob": blob})
 
     if not viable:
-        return None, notes
+        return None, notes, down_in_a_row >= 3 or (0 < down_in_a_row == len(cands))
     viable.sort(key=lambda v: (v["report"].last_month, v["report"].as_at))
-    return viable[-1], notes
+    return viable[-1], notes, False
 
 
 def check_history(cands, man) -> list[dict]:
@@ -278,6 +314,8 @@ def main(argv=None):
         log("Querying the NT Open Data Portal (CKAN)…")
         try:
             cands = portal.list_candidates(log)
+        except portal.PortalUnavailable as exc:
+            return portal_down(str(exc).splitlines()[-1].strip(), prev_last)
         except portal.PortalError as exc:
             log(f"STOP: {exc}")
             return 2
@@ -297,7 +335,9 @@ def main(argv=None):
                 log(f"  {len(hist_flags)} historical flag(s) raised — reported, not applied")
 
         log("Inspecting candidates for the current period (contents, not names)…")
-        chosen, portal_notes = discover_current(cands)
+        chosen, portal_notes, all_down = discover_current(cands)
+        if chosen is None and all_down:
+            return portal_down("every release download failed", prev_last)
         if chosen is None:
             log("STOP: no usable current-era source found on the portal")
             return 2
@@ -316,6 +356,9 @@ def main(argv=None):
 
     if old is not None and rep.last_month <= prev_last and not args.simulate:
         log(f"Up to date: portal's newest month is {rep.last_month}, master already has {prev_last}")
+        if months_behind(prev_last) > STALE_AFTER_MONTHS:
+            log(f"NOTE: the NT has not published a month after {prev_last} yet, "
+                f"{months_behind(prev_last)} months on. Nothing is wrong here; the release is late.")
         return 0
 
     if args.check:
