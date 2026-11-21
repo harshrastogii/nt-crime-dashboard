@@ -29,20 +29,20 @@
   ],
   "current": {
     "role": "current",
-    "file": "data/nt_crime_statistics_aug_2026.csv",
+    "file": "data/nt_crime_statistics_sep_2026.csv",
     "covers_from": "2023-12",
-    "covers_to": "2026-08",
-    "dataset_title": "Current - NT Crime Statistics August 2026",
-    "resource_url": "https://data.nt.gov.au/dataset/ec7f057c-de34-4912-b887-73fc9081af37/resource/be240fb9-4dd6-4506-a5ac-367218ec9afe/download/nt_crime_statistics_aug_2026.csv",
-    "as_at": "2026-10-01",
-    "md5": "22cae4652993023ff875eef2751d7a48",
+    "covers_to": "2026-09",
+    "dataset_title": "Current - NT Crime Statistics September 2026",
+    "resource_url": "https://data.nt.gov.au/dataset/17987a81-0c9b-4fbf-842a-b0c6074549b3/resource/c0bf8380-8b27-41b2-8e7e-e3fc1b7476cf/download/nt_crime_statistics_sep_2026.csv",
+    "as_at": "2026-11-02",
+    "md5": "57804175e0ae277ff33b7a3dc0585e52",
     "pinned": false
   },
   "expected_licence": {
     "license_id": "cc-by",
     "license_title": "Creative Commons Attribution"
   },
-  "last_run": "2026-10-14T22:38:19+00:00",
+  "last_run": "2026-11-21T01:05:03+00:00",
   "known_historical_urls": [
     "https://data.nt.gov.au/dataset/0009541d-325f-4061-80ef-c14fbd4a163d/resource/9e1ddd29-d34e-4cc6-a7b2-1c6c7c83dd54/download/nt_crime_statistics_jul_2021.csv",
     "https://data.nt.gov.au/dataset/071450ed-19ca-43d0-aff5-f8d3076f8d89/resource/d3133a41-357b-4b40-8418-d1a7e27df04d/download/nt_crime_statistics_jan_2020.csv",
